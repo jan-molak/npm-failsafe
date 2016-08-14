@@ -1,85 +1,77 @@
 'use strict';
 
-const npm = require('npm'),
-    format = require('util').format;
+let npm    = require('npm'),
+    tto    = require('terminal-table-output')
 
-class Results {
-
-    constructor(_scripts_) {
-        this.results = _scripts_.reduce( (acc, script) => {
-            acc[script] = null;
-
-            return acc;
-        }, {});
-    }
-
-    finished(script, error) {
-        this.results[script] = error || 'success';
-    }
-
-    allFinished() {
-        return Object.keys(this.results).reduce( (done, script) => {
-            return done && this.results[script];
-        }, true);
-    }
-
-    allSuccessful() {
-        Object.keys(this.results).reduce( (result, script) => {
-            return result && ! (this.results[script] instanceof Error);
-        }, true);
-    }
-
-    summary() {
-        return this.results;
-    }
-}
-
-class ErrorPrinter {
-    print(summary) {
-        let template = '%s\t| %s';
-
-        console.log('------------------------------------');
-        console.log('Some of the npm scripts have failed:');
-        console.log('------------------------------------');
-        console.log(format(template, 'script', 'result'))
-        console.log('------------------------------------');
-
-        Object.keys(summary).forEach( script => {
-            let result = summary[script];
-
-            if (result instanceof Error) {
-                console.error(format(template, script, result.message));
-            } else {
-                console.log(format(template, script, result));
-            }
-        });
-    }
-}
-
-module.exports = (scripts) => {
-
-    let results = new Results(scripts),
-        printer = new ErrorPrinter();
-
+function failsafe(scripts) {
     npm.load({}, (err) => {
         if (err) {
             console.error(err);
             exit(1);
         }
 
-        scripts.forEach(script => {
-            npm.commands.run([script], error => {
-                results.finished(script, error);
+        runAll(scripts).then(
+            () => {
+                process.exit(0)
+            },
+            (errors) => {
+                print(errors);
 
-                if (results.allFinished()) {
-                    if (results.allSuccessful()) {
-                        process.exit(0);
-                    } else {
-                        printer.print(results.summary());
-                        process.exit(1);
-                    }
-                }
-            });
+                process.exit(1);
+            }
+        );
+    });
+}
+
+function runAll(scripts) {
+    let errors = [];
+
+    return scripts
+        .reduce((previous, script) => previous.then(
+            () => run(script).catch(error => {
+                errors.push({ script: script, error: error });
+            }),
+
+            (error) => {
+                errors.push({ script: script, error: error });
+
+                return run(script);
+            }),
+
+            Promise.resolve())
+        .then(() => {
+            if (errors.length > 0) {
+                throw errors;
+            }
+        });
+}
+
+function run(script) {
+    return new Promise( (resolve, reject) => {
+        npm.commands.run([script], error => {
+            if (error) {
+                reject(error);
+            }
+
+            resolve();
         });
     });
-};
+}
+
+function print(results) {
+
+    let summary = results
+        .reduce(
+            (table, result) => table.pushrow([ result.script, singleLine(result.error.message) ]),
+            tto.create().line()
+        );
+
+    console.error('Some of the npm scripts have failed:');
+    console.error(summary.print())
+}
+
+function singleLine(string) {
+    return string.replace('\n', ' ');
+}
+
+module.exports = failsafe;
