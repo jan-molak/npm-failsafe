@@ -1,0 +1,47 @@
+{
+  "name": "npm-failsafe",
+  "description": "Executes a sequence of npm scripts.",
+  "main": "src/index.js",
+  "bin": {
+    "failsafe": "bin/failsafe"
+  },
+  "scripts": {
+    "test": "exit 0;",
+    "commit": "git-cz",
+    "semantic-release": "semantic-release pre && npm publish && semantic-release post"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/jan-molak/npm-failsafe.git"
+  },
+  "keywords": [
+    "cli",
+    "npm",
+    "script",
+    "scripts",
+    "ci"
+  ],
+  "author": "Jan Molak <jan.molak@smartcodeltd.co.uk>",
+  "license": "Apache-2.0",
+  "bugs": {
+    "url": "https://github.com/jan-molak/npm-failsafe/issues"
+  },
+  "homepage": "https://github.com/jan-molak/npm-failsafe",
+  "dependencies": {
+    "npm": "^2.0.0"
+  },
+  "engines": {
+    "node": ">= 4.4.5",
+    "npm": ">= 2"
+  },
+  "devDependencies": {
+    "commitizen": "2.8.5",
+    "cz-conventional-changelog": "1.1.7",
+    "semantic-release": "^4.3.5"
+  },
+  "config": {
+    "commitizen": {
+      "path": "node_modules/cz-conventional-changelog"
+    }
+  }
+}
