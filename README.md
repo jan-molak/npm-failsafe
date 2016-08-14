@@ -1,5 +1,13 @@
 # NPM Failsafe
 
+[![travis][travis-image]][travis-url]
+[![npm][npm-image]][npm-url]
+
+[travis-image]: https://img.shields.io/travis/jan-molak/npm-failsafe.svg?style=flat
+[travis-url]: https://travis-ci.org/jan-molak/npm-failsafe
+[npm-image]: https://img.shields.io/npm/v/npm-failsafe.svg?style=flat
+[npm-url]: https://npmjs.org/package/npm-failsafe
+
 The `npm-failsafe` lets you execute a sequence of NPM scripts and return the correct exit code
 should any of them fail.
 
@@ -65,7 +73,7 @@ should any of them fail:
 
 ## Your feedback matters!
 
-Did you find this project useful? Give it a star! &#9733;
+Did you find this project useful? [Give it a star on github](https://github.com/jan-molak/npm-failsafe)! &#9733;
 
 Found a bug? Raise [an issue](https://github.com/jan-molak/npm-failsafe/issues?state=open)
 or submit a pull request.

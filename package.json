@@ -1,5 +1,6 @@
 {
   "name": "npm-failsafe",
+  "version": "0.0.0-semantic",
   "description": "Executes a sequence of npm scripts.",
   "main": "src/index.js",
   "bin": {
