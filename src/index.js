@@ -10,7 +10,7 @@ function failsafe(scripts) {
             exit(1);
         }
 
-        runAll(scripts).then(
+        runAll(...splitArray(scripts, '--')).then(
             () => {
                 process.exit(0)
             },
@@ -23,12 +23,12 @@ function failsafe(scripts) {
     });
 }
 
-function runAll(scripts) {
+function runAll(scripts, args) {
     let errors = [];
 
     return scripts
         .reduce((previous, script) => previous.then(
-            () => run(script).catch(error => {
+            () => run(script, args).catch(error => {
                 errors.push({ script: script, error: error });
             }),
 
@@ -46,9 +46,9 @@ function runAll(scripts) {
         });
 }
 
-function run(script) {
+function run(script, args) {
     return new Promise( (resolve, reject) => {
-        npm.commands.run([script], error => {
+        npm.commands.run([ script, ...args ], error => {
             if (error) {
                 reject(error);
             }
@@ -72,6 +72,14 @@ function print(results) {
 
 function singleLine(string) {
     return string.replace('\n', ' ');
+}
+
+function splitArray(array, splitter) {
+    let index = array.indexOf(splitter);
+    if (index !== -1) {
+        return [ array.slice(0, index), array.slice(index + 1) ];
+    }
+    return [ array, [] ];
 }
 
 module.exports = failsafe;
