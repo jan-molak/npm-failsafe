@@ -1,26 +1,18 @@
 'use strict';
-
-let npm    = require('npm'),
-    tto    = require('terminal-table-output')
+const exec = require('child_process').exec;
+const tto = require('terminal-table-output')
 
 function failsafe(scripts) {
-    npm.load({}, (err) => {
-        if (err) {
-            console.error(err);
-            exit(1);
+    runAll(splitArray(scripts, '--')).then(
+        () => {
+            process.exit(0)
+        },
+        (errors) => {
+            print(errors);
+
+            process.exit(1);
         }
-
-        runAll(...splitArray(scripts, '--')).then(
-            () => {
-                process.exit(0)
-            },
-            (errors) => {
-                print(errors);
-
-                process.exit(1);
-            }
-        );
-    });
+    );
 }
 
 function runAll(scripts, args) {
@@ -48,9 +40,9 @@ function runAll(scripts, args) {
 
 function run(script, args) {
     return new Promise( (resolve, reject) => {
-        npm.commands.run([ script, ...args ], error => {
-            if (error) {
-                reject(error);
+        exec(`npm run ${script}`, (err) => {
+            if (err) {
+                reject(err);
             }
 
             resolve();
@@ -76,10 +68,14 @@ function singleLine(string) {
 
 function splitArray(array, splitter) {
     let index = array.indexOf(splitter);
-    if (index !== -1) {
-        return [ array.slice(0, index), array.slice(index + 1) ];
+    if (index === -1) {
+        return array;
     }
-    return [ array, [] ];
+
+    const argless = array.slice(0, index - 1);
+    const argful = array.slice(index - 1, array.length).join(' ');
+
+    return argless.concat(argful);
 }
 
 module.exports = failsafe;
