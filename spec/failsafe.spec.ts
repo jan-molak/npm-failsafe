@@ -6,7 +6,9 @@ import expect = require('./expect');
 import { Failsafe } from '../src/failsafe';
 import { Logger } from '../src/logger';
 
-describe(`Failsafe`, () => {
+describe(`Failsafe`, function() {
+    this.timeout(5000);
+
     let logger: AccumulatingLogger,
         failsafe: Failsafe;
 
@@ -110,10 +112,6 @@ describe(`Failsafe`, () => {
                 });
         });
     });
-
-    describe(`Arguments`, () => {
-        // todo: do I need those?
-    })
 });
 
 function line(start: number, end: number = start + 1) {
