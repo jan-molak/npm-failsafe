@@ -12,7 +12,7 @@ describe(`Failsafe`, function() {
     const 
         Success = 0,
         General_Failure = 1,
-        Fatal_Error = 2;
+        Fatal_Error = 10;
 
     let logger: AccumulatingLogger,
         failsafe: Failsafe;
