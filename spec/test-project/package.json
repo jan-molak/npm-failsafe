@@ -6,7 +6,6 @@
   "scripts": {
     "success": "ends-with-success",
     "general-failure": "ends-with-general-failure",
-    "fatal-error": "ends-with-fatal-error",
     "buffered-output": "buffered-output"
   },
   "author": "",

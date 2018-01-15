@@ -11,8 +11,7 @@ describe(`Failsafe`, function() {
     
     const 
         Success = 0,
-        General_Failure = 1,
-        Fatal_Error = 10;
+        General_Failure = 1;
 
     let logger: AccumulatingLogger,
         failsafe: Failsafe;
@@ -33,18 +32,13 @@ describe(`Failsafe`, function() {
         it(`finishes with a general failure`, () => {
             return expect(failsafe.run([`general-failure`])).to.eventually.equal(General_Failure);
         });
-
-        it(`finishes with a fatal error`, () => {
-            return expect(failsafe.run([`fatal-error`])).to.eventually.equal(Fatal_Error);
-        });
     });
 
     given(
         {scripts: [`success`, `success`], expected_result: Success },
         {scripts: [`success`, `general-failure`], expected_result: General_Failure },
-        {scripts: [`general-failure`, `fatal-error`], expected_result: Fatal_Error },
-        {scripts: [`fatal-error`, `fatal-error`], expected_result: Fatal_Error },
-        {scripts: [`fatal-error`, `general-failure`, `success`], expected_result: Fatal_Error },
+        {scripts: [`general-failure`, `general-failure`], expected_result: General_Failure },
+        {scripts: [`general`, `success`], expected_result: General_Failure },
     ).it(`returns with the worst exit code encountered`, ({ scripts, expected_result }) => {
         return expect(failsafe.run(scripts)).to.eventually.equal(expected_result);
     });
