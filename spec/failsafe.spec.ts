@@ -8,6 +8,11 @@ import { Logger } from '../src/logger';
 
 describe(`Failsafe`, function() {
     this.timeout(5000);
+    
+    const 
+        Success = 0,
+        General_Failure = 1,
+        Fatal_Error = 100;
 
     let logger: AccumulatingLogger,
         failsafe: Failsafe;
@@ -22,25 +27,25 @@ describe(`Failsafe`, function() {
 
     describe(`Returns with an exit code of the executed script, when:`, () => {
         it(`finishes with a success`, () => {
-            return expect(failsafe.run([`success`])).to.eventually.equal(0);
+            return expect(failsafe.run([`success`])).to.eventually.equal(Success);
         });
 
         it(`finishes with a general failure`, () => {
-            return expect(failsafe.run([`general-failure`])).to.eventually.equal(1);
+            return expect(failsafe.run([`general-failure`])).to.eventually.equal(General_Failure);
         });
 
         it(`finishes with a fatal error`, () => {
-            return expect(failsafe.run([`fatal-error`])).to.eventually.equal(129);
+            return expect(failsafe.run([`fatal-error`])).to.eventually.equal(Fatal_Error);
         });
     });
 
     given(
-        {scripts: [`success`, `success`], expected_result: 0},
-        {scripts: [`success`, `general-failure`], expected_result: 1},
-        {scripts: [`general-failure`, `fatal-error`], expected_result: 129},
-        {scripts: [`fatal-error`, `fatal-error`], expected_result: 129},
-        {scripts: [`fatal-error`, `general-failure`, `success`], expected_result: 129},
-    ).it(`returns with the worst exit code encountered`, ({scripts, expected_result}) => {
+        {scripts: [`success`, `success`], expected_result: Success },
+        {scripts: [`success`, `general-failure`], expected_result: General_Failure },
+        {scripts: [`general-failure`, `fatal-error`], expected_result: Fatal_Error },
+        {scripts: [`fatal-error`, `fatal-error`], expected_result: Fatal_Error },
+        {scripts: [`fatal-error`, `general-failure`, `success`], expected_result: Fatal_Error },
+    ).it(`returns with the worst exit code encountered`, ({ scripts, expected_result }) => {
         return expect(failsafe.run(scripts)).to.eventually.equal(expected_result);
     });
 
@@ -100,7 +105,7 @@ describe(`Failsafe`, function() {
 
     describe(`Error handling`, () => {
         it(`advises the developer when requested script doesn't exist`, () => {
-            return expect(failsafe.run([`non-existent`])).to.eventually.equal(1)
+            return expect(failsafe.run([`non-existent`])).to.eventually.equal(General_Failure)
                 .then(_ => {
                     expect(line(0).of(logger.error_entries)).to.deep.equal([
                         `[non-existent] npm ERR! missing script: non-existent`,
