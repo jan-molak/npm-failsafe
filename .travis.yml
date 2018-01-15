@@ -2,18 +2,15 @@ sudo: false
 language: node_js
 cache:
   directories:
-    - node_modules
+    - ~/.npm
 notifications:
   email: false
 node_js:
   - '8'
-before_script:
-  - npm prune
 script:
   - npm run clean && npm run lint && npm test && npm run package
 after_success:
-  - ./bin/failsafe test
-  - npm run semantic-release
+  - npm run travis-deploy-once "npm run semantic-release"
 branches:
   except:
     - /^v\d+\.\d+\.\d+$/
