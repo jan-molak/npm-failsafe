@@ -2,12 +2,16 @@
   "name": "npm-failsafe",
   "version": "0.0.0-semantic",
   "description": "Executes a sequence of npm scripts.",
-  "main": "src/index.js",
+  "main": "lib/index.js",
+  "typings": "lib/index.d.ts",
   "bin": {
     "failsafe": "bin/failsafe"
   },
   "scripts": {
-    "test": "exit 0;",
+    "clean": "rimraf lib",
+    "lint": "tslint --project ./tsconfig.json --config ./tslint.json --format prose",
+    "test": "mocha --opts ./mocha.opts 'spec/*.spec.ts'",
+    "package": "tsc --project tsconfig.json",
     "commit": "git-cz",
     "semantic-release": "semantic-release pre && npm publish && semantic-release post"
   },
@@ -36,9 +40,22 @@
     "npm": ">= 2"
   },
   "devDependencies": {
+    "@types/chai": "4.1.0",
+    "@types/chai-as-promised": "7.1.0",
+    "@types/mocha": "2.2.46",
+    "@types/node": "9.3.0",
+    "chai": "4.1.2",
+    "chai-as-promised": "7.1.1",
     "commitizen": "2.8.5",
     "cz-conventional-changelog": "1.1.7",
-    "semantic-release": "^4.3.5"
+    "mocha": "4.1.0",
+    "mocha-testdata": "1.2.0",
+    "rimraf": "2.6.2",
+    "semantic-release": "^4.3.5",
+    "ts-node": "4.1.0",
+    "tslint": "5.9.1",
+    "tslint-microsoft-contrib": "5.0.2",
+    "typescript": "2.6.2"
   },
   "config": {
     "commitizen": {

@@ -21,7 +21,8 @@ npm install --save-dev npm-failsafe
 
 **In your project:**
 
-You should use this to run only scripts which are defined in your `package.json` file. Ideally, you should also provide all args for these scripts upfront, due to the order in which scripts/args are interpreted:
+You should use this to run only scripts which are defined in your `package.json` file. 
+Ideally, you should also provide all args for these scripts upfront, due to the order in which scripts/args are interpreted:
 
 Each script will be executed with `npm run`.
 
@@ -40,21 +41,6 @@ Each script will be executed with `npm run`.
 ```
 
 In the above example, you can see that args for each script on which `failsafe` will run have been provided upfront.
-
-*What is actually allowed*
-
-```bash
-# Allowed
-failsafe jest mocha webpack
-
-# Allowed
-failsafe jest mocha webpack -- --port=3000 --use-ts
-
-# Disallowed (as "mocha" and "webpack") are interpreted as additional args of "jest".
-
-failsafe jest -- --coverage mocha webpack
-```
-
 
 ## Motivation
 

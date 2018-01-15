@@ -1,2 +1,7 @@
 node_modules
 commit
+
+spec
+mocha.opts
+tsconfig*.json
+tslint.json
