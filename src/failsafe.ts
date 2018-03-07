@@ -25,7 +25,9 @@ export class Failsafe {
 
     private runScript(script_name: string): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const script = spawn(`npm`, [`run`, script_name], {
+            const npm = /^win/.test(process.platform) ? `npm.cmd` : `npm`;
+
+            const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
                 env: process.env,
             });
