@@ -1,11 +1,11 @@
 # NPM Failsafe
 
 [![npm version][npm-version-image]][npm-version-url]
-[![travis][travis-image]][travis-url]
+[![build status][actions-image]][actions-url]
 [![npm][npm-stats-image]][npm-stats-url]
 
-[travis-image]: https://img.shields.io/travis/jan-molak/npm-failsafe.svg?style=flat
-[travis-url]: https://travis-ci.org/jan-molak/npm-failsafe
+[actions-image]: https://github.com/jan-molak/npm-failsafe/workflows/build/badge.svg
+[actions-url]: https://github.com/jan-molak/npm-failsafe/actions
 [npm-stats-image]: https://img.shields.io/npm/dm/npm-failsafe.svg?style=flat
 [npm-stats-url]: https://npm-stat.com/charts.html?package=npm-failsafe
 [npm-version-image]: https://badge.fury.io/js/npm-failsafe.svg
