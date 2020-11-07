@@ -48,7 +48,7 @@
     "commitizen": "2.8.5",
     "cz-conventional-changelog": "1.1.7",
     "lodash": "4.17.4",
-    "mocha": "4.1.0",
+    "mocha": "8.2.1",
     "mocha-testdata": "1.2.0",
     "rimraf": "2.6.2",
     "semantic-release": "^12.2.2",
