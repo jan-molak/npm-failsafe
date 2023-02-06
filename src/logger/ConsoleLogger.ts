@@ -1,4 +1,4 @@
-import { Logger } from './logger';
+import { Logger } from './Logger';
 
 export class ConsoleLogger implements Logger {
     info(script_name: string, message: string): void {

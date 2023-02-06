@@ -1,2 +1,2 @@
-export * from './ConsoleLogget';
+export * from './ConsoleLogger';
 export * from './Logger';
