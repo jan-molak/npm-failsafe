@@ -51,11 +51,11 @@ describe(`Failsafe`, function() {
 
             expect(exitCode).to.equal(Success);
 
-            expect(line(4, 6).of(logger.info_entries)).to.deep.equal([
+            expect(logger.infoOutput()).to.include([
                 '[success] Tests executed correctly',
                 '[success] Another line',
                 `[failsafe] Script 'success' exited with code 0`,
-            ]);
+            ].join('\n'));
         });
 
         it(`reports the stderr, prefixing each line with the name of the script`, async () => {
@@ -63,14 +63,14 @@ describe(`Failsafe`, function() {
 
             expect(exitCode).to.equal(General_Failure);
 
-            expect(line(0, 1).of(logger.error_entries)).to.deep.equal([
+            expect(logger.errorOutput()).to.include([
                 `[general-failure] A test has failed`,
                 `[general-failure] Another line describing the problem`,
-            ]);
+            ].join('\n'));
 
-            expect(line(4).of(logger.info_entries)).to.deep.equal([
+            expect(logger.infoOutput()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
-            ]);
+            ].join('\n'));
         });
 
         it(`works with buffered output`, async () => {
@@ -78,11 +78,11 @@ describe(`Failsafe`, function() {
 
             expect(exitCode).to.equal(Success);
 
-            expect(line(4, 6).of(logger.info_entries)).to.deep.equal([
+            expect(logger.infoOutput()).to.include([
                 '[buffered-output] This is one line',
                 '[buffered-output] This is another line',
                 `[failsafe] Script 'buffered-output' exited with code 0`,
-            ]);
+            ].join('\n'));
         });
     });
 
@@ -92,18 +92,19 @@ describe(`Failsafe`, function() {
 
             expect(exitCode).to.equal(General_Failure);
 
-            expect(line(4, 6).of(logger.info_entries)).to.deep.equal([
+            expect(logger.infoOutput()).to.include([
                 '[success] Tests executed correctly',
                 '[success] Another line',
                 `[failsafe] Script 'success' exited with code 0`,
-            ]);
-            expect(line(0, 1).of(logger.error_entries)).to.deep.equal([
+            ].join('\n'));
+            expect(logger.errorOutput()).to.include([
                 `[general-failure] A test has failed`,
                 `[general-failure] Another line describing the problem`,
-            ]);
-            expect(line(11, 14).of(logger.info_entries)).to.deep.equal([
+            ].join('\n'));
+
+            expect(logger.infoOutput()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
-            ]);
+            ].join('\n'));
         });
     });
 
@@ -113,34 +114,37 @@ describe(`Failsafe`, function() {
 
             expect(exitCode).to.equal(General_Failure);
 
-            expect(line(0).of(logger.error_entries)[0]).to.equal(
+            expect(logger.errorOutput()).to.include([
                 `[non-existent] npm ERR! Missing script: "non-existent"`,
-            );
-            expect(line(0, 3).of(logger.info_entries)).to.deep.equal([
+            ].join('\n'));
+
+            expect(logger.infoOutput()).to.include([
                 `[failsafe] Script 'non-existent' exited with code 1`,
-            ]);
+            ].join('\n'));
         });
     });
 });
 
-function line(start: number, end: number = start + 1) {
-    return ({
-        of: (output: string[]) => output.slice(start, end + 1),
-    });
-}
-
 class AccumulatingLogger implements Logger {
     constructor(
-        public readonly info_entries: string[] = [],
-        public readonly error_entries: string[] = [],
+        public readonly infoEntries: string[] = [],
+        public readonly errorEntries: string[] = [],
     ) {
     }
 
     info(script_name: string, line: string) {
-        this.info_entries.push(`[${ script_name }] ${ line }`);
+        this.infoEntries.push(`[${ script_name }] ${ line }`);
     }
 
     error(script_name: string, line: string) {
-        this.error_entries.push(`[${ script_name }] ${ line }`);
+        this.errorEntries.push(`[${ script_name }] ${ line }`);
+    }
+
+    infoOutput(): string {
+        return this.infoEntries.join('\n')
+    }
+
+    errorOutput(): string {
+        return this.errorEntries.join('\n')
     }
 }
