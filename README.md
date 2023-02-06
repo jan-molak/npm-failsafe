@@ -4,7 +4,7 @@
 [![build status][actions-image]][actions-url]
 [![npm][npm-stats-image]][npm-stats-url]
 
-[actions-image]: https://github.com/jan-molak/npm-failsafe/workflows/build/badge.svg
+[actions-image]: https://github.com/jan-molak/npm-failsafe/workflows/Main/badge.svg
 [actions-url]: https://github.com/jan-molak/npm-failsafe/actions
 [npm-stats-image]: https://img.shields.io/npm/dm/npm-failsafe.svg?style=flat
 [npm-stats-url]: https://npm-stat.com/charts.html?package=npm-failsafe
