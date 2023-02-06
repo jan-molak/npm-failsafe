@@ -55,7 +55,6 @@
     "eslint-plugin-simple-import-sort": "^8.0.0",
     "eslint-plugin-unicorn": "^43.0.2",
     "eslint-plugin-unused-imports": "^2.0.0",
-    "lodash": "^4.17.20",
     "mocha": "^8.2.1",
     "mocha-testdata": "^1.2.0",
     "rimraf": "^3.0.2",

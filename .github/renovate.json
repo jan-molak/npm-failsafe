@@ -15,5 +15,22 @@
   "rangeStrategy": "bump",
   "ignorePaths": [
     "**/node_modules/**"
+  ],
+  "packageRules": [
+    {
+      "groupName": "TypeScript dependencies",
+      "packagePatterns": [
+        "^ts-node$",
+        "^typescript$"
+      ]
+    },
+    {
+      "groupName": "ESLint dependencies",
+      "packagePatterns": [
+        "^eslint$",
+        "^eslint-plugin",
+        "^@typescript-eslint"
+      ]
+    }
   ]
 }
