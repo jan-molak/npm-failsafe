@@ -3,7 +3,7 @@ import 'mocha';
 import { given } from 'mocha-testdata';
 import path = require('path');
 
-import { Failsafe } from '../src/failsafe';
+import { Failsafe } from '../src/Failsafe';
 import { Logger } from '../src/logger';
 import expect = require('./expect');
 
