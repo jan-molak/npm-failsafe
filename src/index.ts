@@ -1,4 +1,4 @@
-import { Failsafe } from './failsafe';
+import { Failsafe } from './Failsafe';
 import { ConsoleLogger } from './logger';
 
 export async function run(scripts: string[]): Promise<number> {
