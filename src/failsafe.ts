@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import readline = require('readline');
 
-import { Logger } from './logger/logger';
+import { Logger } from './logger';
 
 export interface FailsafeConfig {
     cwd: string;
