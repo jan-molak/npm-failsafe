@@ -25,6 +25,17 @@ describe(`Failsafe`, function() {
         );
     });
 
+    it(`exits with error when no scripts are specified`, async () => {
+        const exitCode = await failsafe.run([]);
+
+        expect(exitCode).to.equal(General_Failure);
+
+        expect(logger.errorOutput()).to.include([
+            `[failsafe] Please specify which npm scripts you'd like to run, for example:`,
+            `  npm failsafe start test`,
+        ].join('\n'));
+    });
+
     describe(`Returns with an exit code of the executed script, when:`, () => {
         it(`finishes with a success`, () => {
             return expect(failsafe.run([`success`])).to.eventually.equal(Success);

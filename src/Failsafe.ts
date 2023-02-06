@@ -15,8 +15,17 @@ export class Failsafe {
         private readonly config: FailsafeConfig) {
     }
 
-    run(scripts_names: string[]): Promise<ExitCode> {
-        return scripts_names.reduce((previous: Promise<ExitCode>, script_name: string) => {
+    async run(scriptsName: string[]): Promise<ExitCode> {
+        if (scriptsName.length === 0) {
+            this.logger.error('failsafe', [
+                `Please specify which npm scripts you'd like to run, for example:`,
+                `  npm failsafe start test`
+            ].join('\n'));
+
+            return 1;
+        }
+
+        return scriptsName.reduce((previous: Promise<ExitCode>, script_name: string) => {
             return previous
                 .then(previous_exit_code => this.runScript(script_name)
                     .then(current_exit_code => Math.max(previous_exit_code, current_exit_code)));
@@ -41,13 +50,13 @@ export class Failsafe {
             stderr
                 .on('line', line => this.logger.error(script_name, line));
 
-            script.on('close', code => {
+            script.on('close', (code: number | null) => {
                 stdout.close();
                 stderr.close();
 
                 this.logger.info('failsafe', `Script '${script_name}' exited with code ${code}`);
 
-                resolve(code);
+                resolve(code ?? 0);
             });
         });
     }
