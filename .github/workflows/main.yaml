@@ -2,8 +2,13 @@ name: build
 
 on:
   push:
+    branches: [ main ]
   pull_request:
     branches: [ main ]
+    types: [ opened, synchronize ]
+
+permissions:
+  contents: read
 
 jobs:
   verify:
