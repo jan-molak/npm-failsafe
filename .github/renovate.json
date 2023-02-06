@@ -1,6 +1,5 @@
 {
   "extends": [
-    ":dependencyDashboard",
     ":semanticPrefixFixDepsChoreOthers",
     ":autodetectPinVersions",
     ":prHourlyLimit2",
@@ -13,6 +12,7 @@
     "helpers:pinGitHubActionDigests"
   ],
   "rangeStrategy": "bump",
+  "automerge": true,
   "ignorePaths": [
     "**/node_modules/**"
   ],
