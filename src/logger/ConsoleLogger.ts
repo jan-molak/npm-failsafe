@@ -1,12 +1,12 @@
-import { Logger } from './logger';
+import { Logger } from './Logger';
 
 export class ConsoleLogger implements Logger {
-    info(script_name: string, message: string) {
+    info(script_name: string, message: string): void {
         // tslint:disable-next-line:no-console
         console.info(`[${script_name}] ${message}`);
     }
 
-    error(script_name: string, message: string) {
+    error(script_name: string, message: string): void {
         // tslint:disable-next-line:no-console
         console.error(`[${script_name}] ${message}`);
     }

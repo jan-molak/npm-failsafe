@@ -1,8 +1,8 @@
 import { Failsafe } from './failsafe';
 import { ConsoleLogger } from './logger';
 
-export function run(scripts: string[]) {
-    if (! scripts.length) {
+export function run(scripts: string[]): Promise<number> {
+    if (scripts.length === 0) {
         // tslint:disable-next-line:no-console
         console.error(
             `Please specify which npm scripts you'd like to run, for example:\n`,

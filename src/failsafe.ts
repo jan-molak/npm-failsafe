@@ -1,7 +1,7 @@
 import { spawn } from 'child_process';
 import readline = require('readline');
 
-import { Logger } from './logger/logger';
+import { Logger } from './logger';
 
 export interface FailsafeConfig {
     cwd: string;
@@ -25,7 +25,7 @@ export class Failsafe {
 
     private runScript(script_name: string): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = /^win/.test(process.platform) ? `npm.cmd` : `npm`;
+            const npm = process.platform.startsWith('win') ? `npm.cmd` : `npm`;
 
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
