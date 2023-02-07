@@ -192,7 +192,7 @@ function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env 
     return { run: failsafeInstance.run.bind(failsafeInstance), logger };
 }
 
-function indented(text: string, indentation: number = 8): string {
+function indented(text: string, indentation = 8): string {
     const space = ' '.repeat(indentation);
 
     return text.split('\n')
