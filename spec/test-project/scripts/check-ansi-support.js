@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 async function run() {
 	const supportsColor = await import('supports-color');
 	return supportsColor.default;

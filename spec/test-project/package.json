@@ -4,11 +4,11 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "success": "ends-with-success",
-    "general-failure": "ends-with-general-failure",
-    "buffered-output": "buffered-output",
-    "check-ansi-support": "check-ansi-support"
+    "success": "node scripts/ends-with-success.js",
+    "general-failure": "node scripts/ends-with-general-failure.js",
+    "buffered-output": "node scripts/buffered-output.js",
+    "check-ansi-support": "node scripts/check-ansi-support.js"
   },
   "author": "",
-  "license": "ISC"
+  "license": "Apache-2.0"
 }
