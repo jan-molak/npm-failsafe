@@ -37,8 +37,11 @@ export class Failsafe {
 
     private runScript(script_name: string): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            console.log('DEBUG> process.platform', process.platform)
-            const npm = process.platform.startsWith('win') ? `npm.cmd` : `npm`;
+            console.log('DEBUG> process.platform', process.platform, process.platform.startsWith('win32'), this.env)
+
+            const npm = process.platform.startsWith('win32')
+                ? `npm.cmd`
+                : `npm`;
 
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
