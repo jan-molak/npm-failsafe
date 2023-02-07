@@ -78,4 +78,5 @@ rules:
   unicorn/prevent-abbreviations:
     - error
     - allowList:
+        env: true
         i: true

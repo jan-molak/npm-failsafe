@@ -42,7 +42,7 @@ export class Failsafe {
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
                 env: {
-                    ...{ 'FORCE_COLOR': this.config.isTTY ? '1' : undefined },
+                    'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
                     ...this.env
                 }
             });

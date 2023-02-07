@@ -177,7 +177,8 @@ function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env 
     const failsafeInstance = new Failsafe(
         logger,
         {
-            ... { cwd: path.join(__dirname, `test-project`), isTTY: true },
+            cwd: path.join(__dirname, `test-project`),
+            isTTY: true,
             ... config,
         },
         {
