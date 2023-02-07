@@ -134,6 +134,16 @@ describe(`Failsafe`, function() {
             ].join('\n'));
         });
     });
+
+    describe('ANSI support', () => {
+        it(`is compatible with Chalk color support detection mechanism`, async () => {
+            const exitCode = await failsafe.run([`check-ansi-support`]);
+
+            expect(exitCode).to.equal(Success);
+
+            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors supported`);
+        });
+    });
 });
 
 class AccumulatingLogger implements Logger {

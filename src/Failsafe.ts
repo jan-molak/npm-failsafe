@@ -38,7 +38,10 @@ export class Failsafe {
 
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
-                env: process.env,
+                env: {
+                    ...{ 'FORCE_COLOR': process.stdout.isTTY ? '1' : undefined },
+                    ...process.env
+                }
             });
 
             const
@@ -50,7 +53,7 @@ export class Failsafe {
             stderr
                 .on('line', line => this.logger.error(script_name, line));
 
-            script.on('close', (code: number | null) => {
+            script.once ('close', (code: number | null) => {
                 stdout.close();
                 stderr.close();
 

@@ -6,7 +6,8 @@
   "scripts": {
     "success": "ends-with-success",
     "general-failure": "ends-with-general-failure",
-    "buffered-output": "buffered-output"
+    "buffered-output": "buffered-output",
+    "check-ansi-support": "check-ansi-support"
   },
   "author": "",
   "license": "ISC"
