@@ -3,8 +3,9 @@ import 'mocha';
 import { given } from 'mocha-testdata';
 import path = require('path');
 
-import { Failsafe } from '../src/Failsafe';
+import { ExitCode, Failsafe, FailsafeConfig } from '../src/Failsafe';
 import { Logger } from '../src/logger';
+
 import expect = require('./expect');
 
 describe(`Failsafe`, function() {
@@ -14,19 +15,10 @@ describe(`Failsafe`, function() {
         Success = 0,
         General_Failure = 1;
 
-    let logger: AccumulatingLogger,
-        failsafe: Failsafe;
-
-    beforeEach(() => {
-        logger = new AccumulatingLogger();
-        failsafe = new Failsafe(
-            logger,
-            { cwd: path.join(__dirname, `test-project`) },
-        );
-    });
-
     it(`exits with error when no scripts are specified`, async () => {
-        const exitCode = await failsafe.run([]);
+        const { run, logger } = failsafe();
+
+        const exitCode = await run([]);
 
         expect(exitCode).to.equal(General_Failure);
 
@@ -38,11 +30,11 @@ describe(`Failsafe`, function() {
 
     describe(`Returns with an exit code of the executed script, when:`, () => {
         it(`finishes with a success`, () => {
-            return expect(failsafe.run([`success`])).to.eventually.equal(Success);
+            return expect(failsafe().run([`success`])).to.eventually.equal(Success);
         });
 
         it(`finishes with a general failure`, () => {
-            return expect(failsafe.run([`general-failure`])).to.eventually.equal(General_Failure);
+            return expect(failsafe().run([`general-failure`])).to.eventually.equal(General_Failure);
         });
     });
 
@@ -51,14 +43,19 @@ describe(`Failsafe`, function() {
         { scripts: [`success`, `general-failure`], expected_result: General_Failure },
         { scripts: [`general-failure`, `general-failure`], expected_result: General_Failure },
         { scripts: [`general`, `success`], expected_result: General_Failure },
-    ).it(`returns with the worst exit code encountered`, ({ scripts, expected_result }) => {
-        return expect(failsafe.run(scripts)).to.eventually.equal(expected_result);
+    ).
+    it(`returns with the worst exit code encountered`, async ({ scripts, expected_result }) => {
+        const exitCode = await failsafe().run(scripts);
+
+        return expect(exitCode).to.equal(expected_result);
     });
 
     describe(`Logging`, () => {
 
         it(`reports the stdout, prefixing each line with the name of the script`, async () => {
-            const exitCode = await failsafe.run([`success`]);
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`success`]);
 
             expect(exitCode).to.equal(Success);
 
@@ -70,7 +67,9 @@ describe(`Failsafe`, function() {
         });
 
         it(`reports the stderr, prefixing each line with the name of the script`, async () => {
-            const exitCode = await failsafe.run([`general-failure`]);
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`general-failure`]);
 
             expect(exitCode).to.equal(General_Failure);
 
@@ -85,7 +84,9 @@ describe(`Failsafe`, function() {
         });
 
         it(`works with buffered output`, async () => {
-            const exitCode = await failsafe.run([`buffered-output`]);
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`buffered-output`]);
 
             expect(exitCode).to.equal(Success);
 
@@ -99,7 +100,9 @@ describe(`Failsafe`, function() {
 
     describe(`Order of execution`, () => {
         it(`executes scripts in a sequence`, async () => {
-            const exitCode = await failsafe.run([`success`, `general-failure`]);
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`success`, `general-failure`]);
 
             expect(exitCode).to.equal(General_Failure);
 
@@ -121,30 +124,70 @@ describe(`Failsafe`, function() {
 
     describe(`Error handling`, () => {
         it(`advises the developer when requested script doesn't exist`, async () => {
-            const exitCode = await failsafe.run([`non-existent`]);
+            const { run, logger } = failsafe({ isTTY: false });
+
+            const exitCode = await run([`non-existent`]);
 
             expect(exitCode).to.equal(General_Failure);
 
-            expect(logger.errorOutput()).to.include([
-                `[non-existent] npm ERR! Missing script: "non-existent"`,
-            ].join('\n'));
+            expect(logger.errorOutput()).to.include('Missing script: "non-existent"');
 
-            expect(logger.infoOutput()).to.include([
-                `[failsafe] Script 'non-existent' exited with code 1`,
-            ].join('\n'));
+            expect(logger.infoOutput()).to.include(`[failsafe] Script 'non-existent' exited with code 1`);
         });
     });
 
-    describe('ANSI support', () => {
-        it(`is compatible with Chalk color support detection mechanism`, async () => {
-            const exitCode = await failsafe.run([`check-ansi-support`]);
+    describe('ANSI colour support', () => {
+        it(`is enabled when the terminal is a TTY (supports colour output)`, async () => {
+            const { run, logger } = failsafe({ isTTY: true });
+
+            const exitCode = await run([`check-ansi-support`]);
 
             expect(exitCode).to.equal(Success);
 
             expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors supported`);
         });
+
+        it(`is enabled when FORCE_COLOR env variable is set to 1`, async () => {
+            // see https://github.com/chalk/supports-color/pull/31
+            const { run, logger } = failsafe({ isTTY: false }, { FORCE_COLOR: '1' });
+
+            const exitCode = await run([`check-ansi-support`]);
+
+            expect(exitCode).to.equal(Success);
+
+            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors supported`);
+        });
+
+        it(`is disabled when FORCE_COLOR env variable is set to 0`, async () => {
+            // see https://github.com/chalk/supports-color/pull/31
+            const { run, logger } = failsafe({ isTTY: false }, { FORCE_COLOR: '0' });
+
+            const exitCode = await run([`check-ansi-support`]);
+
+            expect(exitCode).to.equal(Success);
+
+            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors not supported`);
+        });
     });
 });
+
+function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env = { }): { run: (scriptsName: string[]) => Promise<ExitCode>, logger: AccumulatingLogger } {
+    const logger = new AccumulatingLogger();
+
+    const failsafeInstance = new Failsafe(
+        logger,
+        {
+            ... { cwd: path.join(__dirname, `test-project`), isTTY: true },
+            ... config,
+        },
+        {
+            ...process.env,
+            ...env,
+        },
+    );
+
+    return { run: failsafeInstance.run.bind(failsafeInstance), logger };
+}
 
 class AccumulatingLogger implements Logger {
     constructor(

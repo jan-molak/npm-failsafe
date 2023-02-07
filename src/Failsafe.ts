@@ -5,6 +5,7 @@ import { Logger } from './logger';
 
 export interface FailsafeConfig {
     cwd: string;
+    isTTY: boolean;
 }
 
 export type ExitCode = number;
@@ -12,7 +13,9 @@ export class Failsafe {
 
     constructor(
         private readonly logger: Logger,
-        private readonly config: FailsafeConfig) {
+        private readonly config: FailsafeConfig,
+        private readonly env: typeof process.env,
+    ) {
     }
 
     async run(scriptsName: string[]): Promise<ExitCode> {
@@ -39,8 +42,8 @@ export class Failsafe {
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
                 env: {
-                    ...{ 'FORCE_COLOR': process.stdout.isTTY ? '1' : undefined },
-                    ...process.env
+                    ...{ 'FORCE_COLOR': this.config.isTTY ? '1' : undefined },
+                    ...this.env
                 }
             });
 
