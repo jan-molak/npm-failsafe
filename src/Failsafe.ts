@@ -5,6 +5,7 @@ import { Logger } from './logger';
 
 export interface FailsafeConfig {
     cwd: string;
+    isTTY: boolean;
 }
 
 export type ExitCode = number;
@@ -12,7 +13,9 @@ export class Failsafe {
 
     constructor(
         private readonly logger: Logger,
-        private readonly config: FailsafeConfig) {
+        private readonly config: FailsafeConfig,
+        private readonly env: typeof process.env,
+    ) {
     }
 
     async run(scriptsName: string[]): Promise<ExitCode> {
@@ -34,11 +37,16 @@ export class Failsafe {
 
     private runScript(script_name: string): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = process.platform.startsWith('win') ? `npm.cmd` : `npm`;
+            const npm = process.platform.startsWith('win32')
+                ? `npm.cmd`
+                : `npm`;
 
             const script = spawn(npm, [`run`, script_name], {
                 cwd: this.config.cwd,
-                env: process.env,
+                env: {
+                    'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
+                    ...this.env
+                }
             });
 
             const
@@ -50,7 +58,7 @@ export class Failsafe {
             stderr
                 .on('line', line => this.logger.error(script_name, line));
 
-            script.on('close', (code: number | null) => {
+            script.once ('close', (code: number | null) => {
                 stdout.close();
                 stderr.close();
 

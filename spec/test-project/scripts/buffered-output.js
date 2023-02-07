@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 process.stdout.write('This is ');
 process.stdout.write('one ');
 process.stdout.write('line\n');
