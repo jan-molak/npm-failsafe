@@ -11,22 +11,40 @@ permissions:
   contents: read
 
 jobs:
-  verify:
+  test-linux:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
+    runs-on: ubuntu-latest
 
     strategy:
       matrix:
         node-version: [ 14.x, 16.x, 18.x ]
-        os-version: [ 'ubuntu-latest', 'windows-latest' ]
-
-    runs-on: ${{ matrix.os-version }}
 
     steps:
       - uses: actions/checkout@v3
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: Setup Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Node Modules
+        uses: bahmutov/npm-install@v1
+        with:
+          install-command: npm ci
+      - run: npm run clean
+      - run: npm run lint
+      - run: npm test
+        env:
+          CI: true
+
+  test-windows:
+    if: "!contains(github.event.head_commit.message, 'ci skip')"
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
       - name: Install Node Modules
         uses: bahmutov/npm-install@v1
         with:
@@ -58,7 +76,10 @@ jobs:
           path: lib/
 
   release:
-    needs: [ build, verify ]
+    needs:
+      - build
+      - test-linux
+      - test-windows
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:

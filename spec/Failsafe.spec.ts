@@ -22,7 +22,7 @@ describe(`Failsafe`, function() {
 
         expect(exitCode).to.equal(General_Failure);
 
-        expect(logger.errorOutput()).to.include([
+        expect(logger.stderr()).to.include([
             `[failsafe] Please specify which npm scripts you'd like to run, for example:`,
             `  npm failsafe start test`,
         ].join('\n'));
@@ -45,9 +45,10 @@ describe(`Failsafe`, function() {
         { scripts: [`general`, `success`], expected_result: General_Failure },
     ).
     it(`returns with the worst exit code encountered`, async ({ scripts, expected_result }) => {
-        const exitCode = await failsafe().run(scripts);
+        const { run, logger } = failsafe();
+        const exitCode = await run(scripts);
 
-        return expect(exitCode).to.equal(expected_result);
+        expect(exitCode).to.equal(expected_result, `Expected exit code of ${expected_result}${ format(logger) }`);
     });
 
     describe(`Logging`, () => {
@@ -57,9 +58,9 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`success`]);
 
-            expect(exitCode).to.equal(Success);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include([
+            expect(logger.stdout()).to.include([
                 '[success] Tests executed correctly',
                 '[success] Another line',
                 `[failsafe] Script 'success' exited with code 0`,
@@ -71,14 +72,14 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`general-failure`]);
 
-            expect(exitCode).to.equal(General_Failure);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
 
-            expect(logger.errorOutput()).to.include([
+            expect(logger.stderr()).to.include([
                 `[general-failure] A test has failed`,
                 `[general-failure] Another line describing the problem`,
             ].join('\n'));
 
-            expect(logger.infoOutput()).to.include([
+            expect(logger.stdout()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
             ].join('\n'));
         });
@@ -88,9 +89,9 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`buffered-output`]);
 
-            expect(exitCode).to.equal(Success);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include([
+            expect(logger.stdout()).to.include([
                 '[buffered-output] This is one line',
                 '[buffered-output] This is another line',
                 `[failsafe] Script 'buffered-output' exited with code 0`,
@@ -104,19 +105,20 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`success`, `general-failure`]);
 
-            expect(exitCode).to.equal(General_Failure);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include([
+            expect(logger.stdout()).to.include([
                 '[success] Tests executed correctly',
                 '[success] Another line',
                 `[failsafe] Script 'success' exited with code 0`,
             ].join('\n'));
-            expect(logger.errorOutput()).to.include([
+
+            expect(logger.stderr()).to.include([
                 `[general-failure] A test has failed`,
                 `[general-failure] Another line describing the problem`,
             ].join('\n'));
 
-            expect(logger.infoOutput()).to.include([
+            expect(logger.stdout()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
             ].join('\n'));
         });
@@ -128,11 +130,11 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`non-existent`]);
 
-            expect(exitCode).to.equal(General_Failure);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
 
-            expect(logger.errorOutput()).to.include('Missing script: "non-existent"');
+            expect(logger.stderr()).to.include('Missing script: "non-existent"');
 
-            expect(logger.infoOutput()).to.include(`[failsafe] Script 'non-existent' exited with code 1`);
+            expect(logger.stdout()).to.include(`[failsafe] Script 'non-existent' exited with code 1`);
         });
     });
 
@@ -142,9 +144,9 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`check-ansi-support`]);
 
-            expect(exitCode).to.equal(Success);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors supported`);
+            expect(logger.stdout()).to.include(`[check-ansi-support] Colors supported`);
         });
 
         it(`is enabled when FORCE_COLOR env variable is set to 1`, async () => {
@@ -153,9 +155,9 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`check-ansi-support`]);
 
-            expect(exitCode).to.equal(Success);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors supported`);
+            expect(logger.stdout()).to.include(`[check-ansi-support] Colors supported`);
         });
 
         it(`is disabled when FORCE_COLOR env variable is set to 0`, async () => {
@@ -164,9 +166,9 @@ describe(`Failsafe`, function() {
 
             const exitCode = await run([`check-ansi-support`]);
 
-            expect(exitCode).to.equal(Success);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
-            expect(logger.infoOutput()).to.include(`[check-ansi-support] Colors not supported`);
+            expect(logger.stdout()).to.include(`[check-ansi-support] Colors not supported`);
         });
     });
 });
@@ -190,6 +192,25 @@ function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env 
     return { run: failsafeInstance.run.bind(failsafeInstance), logger };
 }
 
+function indented(text: string, indentation: number = 8): string {
+    const space = ' '.repeat(indentation);
+
+    return text.split('\n')
+        .map(line => `${ space }${ line }`)
+        .join('\n');
+}
+
+function format(logger: AccumulatingLogger): string {
+
+    return `
+        STDOUT:
+${ indented(logger.stdout()) }
+        
+        STDERR:        
+${ indented(logger.stderr()) }
+    `;
+}
+
 class AccumulatingLogger implements Logger {
     constructor(
         public readonly infoEntries: string[] = [],
@@ -205,11 +226,11 @@ class AccumulatingLogger implements Logger {
         this.errorEntries.push(`[${ script_name }] ${ line }`);
     }
 
-    infoOutput(): string {
+    stdout(): string {
         return this.infoEntries.join('\n')
     }
 
-    errorOutput(): string {
+    stderr(): string {
         return this.errorEntries.join('\n')
     }
 }
