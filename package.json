@@ -58,7 +58,7 @@
     "mocha": "^10.2.0",
     "mocha-testdata": "^1.2.0",
     "rimraf": "^4.4.1",
-    "semantic-release": "^21.0.0",
+    "semantic-release": "^21.0.1",
     "supports-color": "^9.3.1",
     "ts-node": "^10.9.1",
     "typescript": "^5.0.3"
