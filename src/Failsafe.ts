@@ -87,20 +87,29 @@ export class Failsafe {
         const mapping: {[argname: string]: string} = {};
         let lastScriptName = '';
         let declarationFinished = false;
-        for (const argument of arguments_) {
+        const argumentList = Array.from(arguments_);
+        while (argumentList.length > 0) {
+            const argument = argumentList.shift() as string;
             if (!declarationFinished) {
                 if (argument === '[...]') {
                     mapping['...'] = lastScriptName;
                     continue;
                 }
-                if (argument.startsWith('[-') && argument.endsWith(']')) {
-                    const argname = argument.replace(/^\[--?|\]$/g, '');
+                if (argument.startsWith('[') && argument.endsWith(']')) {
+                    // [--foo]
+                    const argname = argument.replace(/^\[-?-?|\]$/g, '');
                     mapping[argname] = lastScriptName;
                     continue;
                 }
                 if (!argument.startsWith('-')) {
-                    scriptArguments[argument] = scriptArguments[argument] ?? [];
-                    lastScriptName = argument;
+                    // script-name[--foo][--bar] -> script-name [--foo] [--bar]
+                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[.+?\])/).filter(s => s !== '' && s !== undefined);
+                    if (!scriptName) {
+                        throw new Error(`Unknown argument '${argument}'`);
+                    }
+                    scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
+                    lastScriptName = scriptName;
+                    argumentList.unshift(...interleavedArguments);
                     continue;
                 }
                 if (argument == '--') {
