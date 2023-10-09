@@ -11,7 +11,7 @@
     "clean": "rimraf lib",
     "lint": "eslint --ext ts --config .eslintrc.yml .",
     "lint:fix": "npm run lint -- --fix",
-    "test": "mocha 'spec/*.spec.ts'",
+    "test": "mocha",
     "compile": "tsc --project tsconfig.json",
     "commit": "git-cz",
     "semantic-release": "semantic-release"
