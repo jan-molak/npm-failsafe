@@ -111,13 +111,10 @@ export class Failsafe {
 
             declarationFinished = true;
             const argname = argument.replace(/^--?|=.*$/g, '');
-            if (argname in mapping) {
-                scriptArguments[mapping[argname]] = scriptArguments[mapping[argname]] ?? [];
-                scriptArguments[mapping[argname]].push(argument);
-            }
-            else if ('...' in mapping) {
-                scriptArguments[mapping['...']] = scriptArguments[mapping['...']] ?? [];
-                scriptArguments[mapping['...']].push(argument);
+            const scriptName = mapping[argname] ?? mapping['...'] ?? undefined;
+            if (scriptName) {
+                scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
+                scriptArguments[scriptName].push(argument);
             }
             else {
                 throw new Error(`Unknown argument '${argument}'`);
