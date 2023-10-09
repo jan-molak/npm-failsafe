@@ -171,6 +171,73 @@ describe(`Failsafe`, function() {
             expect(logger.stdout()).to.include(`[check-ansi-support] Colors not supported`);
         });
     });
+
+    describe('Pass arguments', () => {
+
+        it(`fails on unknown arguments`, async () => {
+            const { run, logger } = failsafe({ isTTY: false }, { });
+
+            const exitCode = await run([`print-args`, '--foo=bar', '--bar=foo']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include(`Unknown argument '--foo=bar'`);
+        });
+
+        it(`passes specific arguments when requested`, async () => {
+            const { run, logger } = failsafe({ isTTY: false }, { });
+
+            const exitCode = await run([`print-args`, '[--foo]', '--foo=bar']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 1 arguments`,
+                `[print-args] --foo=bar`,
+            ].join('\n'));
+        });
+
+        it(`passes all arguments when requested`, async () => {
+            const { run, logger } = failsafe({ isTTY: false }, { });
+
+            const exitCode = await run([`print-args`, '[...]', '--foo=bar', '--bar=foo']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] --foo=bar`,
+                `[print-args] --bar=foo`,
+            ].join('\n'));
+        });
+
+        it(`passes all arguments after separator`, async () => {
+            const { run, logger } = failsafe({ isTTY: false }, { });
+
+            const exitCode = await run([`print-args`, '[...]', '--', 'foo bar', 'baz']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] foo bar`,
+                `[print-args] baz`,
+            ].join('\n'));
+        });
+
+        it(`passes different arguments to specifc scripts`, async () => {
+            const { run, logger } = failsafe({ isTTY: false }, { });
+
+            const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--bar]', '--foo=bar', '--bar=foo']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 1 arguments`,
+                `[print-args] --foo=bar`,
+            ].join('\n'));
+
+            expect(logger.stdout()).to.include([
+                `[also-print-args] Listing 1 arguments`,
+                `[also-print-args] --bar=foo`,
+            ].join('\n'));
+        });
+    });
 });
 
 function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env = { }): { run: (scriptsName: string[]) => Promise<ExitCode>, logger: AccumulatingLogger } {

@@ -18,7 +18,17 @@ export class Failsafe {
     ) {
     }
 
-    async run(scriptsName: string[]): Promise<ExitCode> {
+    async run(arguments_: string[]): Promise<ExitCode> {
+        const scriptArguments: {[script: string]: string[]} = {};
+        try {
+            this.parseArguments(arguments_, scriptArguments);
+        } catch (error: any) {
+            this.logger.error('failsafe', `${error}`);
+            return 1;
+        }
+
+        const scriptsName = Object.keys(scriptArguments);
+
         if (scriptsName.length === 0) {
             this.logger.error('failsafe', [
                 `Please specify which npm scripts you'd like to run, for example:`,
@@ -30,18 +40,22 @@ export class Failsafe {
 
         return scriptsName.reduce((previous: Promise<ExitCode>, script_name: string) => {
             return previous
-                .then(previous_exit_code => this.runScript(script_name)
+                .then(previous_exit_code => this.runScript(script_name, scriptArguments[script_name])
                     .then(current_exit_code => Math.max(previous_exit_code, current_exit_code)));
         }, Promise.resolve(0));
     }
 
-    private runScript(script_name: string): Promise<ExitCode> {
+    private runScript(script_name: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
             const npm = process.platform.startsWith('win32')
                 ? `npm.cmd`
                 : `npm`;
 
-            const script = spawn(npm, [`run`, script_name], {
+            const npmArguments = [`run`, script_name];
+            if (arguments_.length > 0) {
+                npmArguments.push('--', ...arguments_);
+            }
+            const script = spawn(npm, npmArguments, {
                 cwd: this.config.cwd,
                 env: {
                     'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
@@ -67,5 +81,47 @@ export class Failsafe {
                 resolve(code ?? 0);
             });
         });
+    }
+
+    private parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
+        const mapping: {[argname: string]: string} = {};
+        let lastScriptName = '';
+        let declarationFinished = false;
+        for (const argument of arguments_) {
+            if (!declarationFinished) {
+                if (argument === '[...]') {
+                    mapping['...'] = lastScriptName;
+                    continue;
+                }
+                if (argument.startsWith('[-') && argument.endsWith(']')) {
+                    const argname = argument.replace(/^\[--?|\]$/g, '');
+                    mapping[argname] = lastScriptName;
+                    continue;
+                }
+                if (!argument.startsWith('-')) {
+                    scriptArguments[argument] = scriptArguments[argument] ?? [];
+                    lastScriptName = argument;
+                    continue;
+                }
+                if (argument == '--') {
+                    declarationFinished = true;
+                    continue;
+                }
+            }
+
+            declarationFinished = true;
+            const argname = argument.replace(/^--?|=.*$/g, '');
+            if (argname in mapping) {
+                scriptArguments[mapping[argname]] = scriptArguments[mapping[argname]] ?? [];
+                scriptArguments[mapping[argname]].push(argument);
+            }
+            else if ('...' in mapping) {
+                scriptArguments[mapping['...']] = scriptArguments[mapping['...']] ?? [];
+                scriptArguments[mapping['...']].push(argument);
+            }
+            else {
+                throw new Error(`Unknown argument '${argument}'`);
+            }
+        }
     }
 }
