@@ -97,13 +97,13 @@ export class Failsafe {
                 }
                 if (argument.startsWith('[') && argument.endsWith(']')) {
                     // [--foo]
-                    const argname = argument.replace(/^\[-?-?|\]$/g, '');
+                    const argname = argument.replaceAll(/^\[-?-?|]$/g, '');
                     mapping[argname] = lastScriptName;
                     continue;
                 }
                 if (!argument.startsWith('-')) {
                     // script-name[--foo][--bar] -> script-name [--foo] [--bar]
-                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[.+?\])/).filter(s => s !== '' && s !== undefined);
+                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[.+?])/).filter(s => s !== '' && s !== undefined);
                     if (!scriptName) {
                         throw new Error(`Unknown argument '${argument}'`);
                     }
@@ -119,7 +119,7 @@ export class Failsafe {
             }
 
             declarationFinished = true;
-            const argname = argument.replace(/^--?|=.*$/g, '');
+            const argname = argument.replaceAll(/^--?|=.*$/g, '');
             const scriptName = mapping[argname] ?? mapping['...'] ?? undefined;
             if (scriptName) {
                 scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
