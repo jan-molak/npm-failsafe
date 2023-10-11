@@ -186,19 +186,6 @@ describe(`Failsafe`, function() {
         it(`passes specific arguments`, async () => {
             const { run, logger } = failsafe();
 
-            const exitCode = await run([`print-args`, '[--foo]', '--foo=bar']);
-            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
-
-            expect(logger.stdout()).to.include([
-                `[print-args] Listing 1 arguments`,
-                `[print-args] --foo=bar`,
-                `[failsafe] Script 'print-args' exited with code 0`,
-            ].join('\n'));
-        });
-
-        it(`passes specific arguments interleaved`, async () => {
-            const { run, logger } = failsafe();
-
             const exitCode = await run(['print-args[--foo][--bar]', '--foo', '--bar']);
             expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
@@ -214,20 +201,6 @@ describe(`Failsafe`, function() {
             const { run, logger } = failsafe();
 
             const exitCode = await run([`print-args`, '[...]', '--foo=bar', '--bar=foo']);
-            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
-
-            expect(logger.stdout()).to.include([
-                `[print-args] Listing 2 arguments`,
-                `[print-args] --foo=bar`,
-                `[print-args] --bar=foo`,
-                `[failsafe] Script 'print-args' exited with code 0`,
-            ].join('\n'));
-        });
-
-        it(`passes all arguments interleaved`, async () => {
-            const { run, logger } = failsafe();
-
-            const exitCode = await run([`print-args[...]`, '--foo=bar', '--bar=foo']);
             expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
             expect(logger.stdout()).to.include([
@@ -271,10 +244,12 @@ describe(`Failsafe`, function() {
             ].join('\n'));
         });
 
-        it(`passes different arguments to specifc scripts interleaved`, async () => {
+
+        it(`passes specific argument to multiple scripts`, async () => {
+
             const { run, logger } = failsafe();
 
-            const exitCode = await run(['print-args[--foo]', 'also-print-args[--bar]', '--foo=bar', '--bar=foo']);
+            const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--foo]', '--foo=bar']);
             expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
 
             expect(logger.stdout()).to.include([
@@ -285,10 +260,12 @@ describe(`Failsafe`, function() {
 
             expect(logger.stdout()).to.include([
                 `[also-print-args] Listing 1 arguments`,
-                `[also-print-args] --bar=foo`,
+                `[also-print-args] --foo=bar`,
                 `[failsafe] Script 'also-print-args' exited with code 0`,
             ].join('\n'));
         });
+
+
 
     });
 
@@ -302,25 +279,74 @@ describe(`Failsafe`, function() {
                     ['print-args[--foo][--bar]', '--foo=bar', '--bar=foo'],
                     ['print-args[--foo,--bar]', '--foo=bar', '--bar=foo'],
                     ['print-args', '[--foo,--bar]', '--foo=bar', '--bar=foo'],
-                    // ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo'],
                 ],
-                'output': { 'print-args': ['--foo=bar', '--bar=foo'] },
-            }
+                'expected': {
+                    'output': { 'print-args': ['--foo=bar', '--bar=foo'] }
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '[--foo]', '[--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[--foo][--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args[--foo][--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args[--foo,--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[--foo,--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo', 'baz'],
+                ],
+                'expected': {
+                    'error': "Unknown argument 'baz'",
+                },
+            },
+            {
+                'inputs': [
+                    ['['],
+                    ['print-args', '['],
+                    ['print-args', '[', ']', '['],
+                ],
+                'expected': {
+                    'error': "Missing ']'",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '[['],
+                ],
+                'expected': {
+                    'error': "Unexpected '['",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', ']'],
+                ],
+                'expected': {
+                    'error': "Unexpected ']'",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', ','],
+                ],
+                'expected': {
+                    'error': "Unexpected ','",
+                },
+            },
         ];
 
         it(`should parse arguments as expected`, async () => {
-            for (const { inputs, output } of cases) {
+            for (const { inputs, expected } of cases) {
                 for (const input of inputs) {
                     const actual: {[script: string]: string[]} = {};
                     const logger = new AccumulatingLogger();
                     const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
-                    try {
+                    if (expected.output) {
                         failsafe.parseArguments(input, actual);
+                        expect(actual).to.deep.equal(expected.output);
                     }
-                    catch (error: any) {
-                        expect.fail(`Expected ${JSON.stringify(input)} to be parsed as ${JSON.stringify(output)}, but got error: ${error}`);
+                    if (expected.error) {
+                        expect(() => failsafe.parseArguments(input, actual)).to.throw(expected.error);
                     }
-                    expect(actual).to.deep.equal(output, `Expected ${JSON.stringify(input)} to be parsed as ${JSON.stringify(output)}`);
                 }
             }
         })

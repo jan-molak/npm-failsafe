@@ -84,51 +84,102 @@ export class Failsafe {
     }
 
     protected parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
-        const mapping: {[argname: string]: string} = {};
+        const mapping: {[argname: string]: string[]} = {};
         let lastScriptName = '';
         let declarationFinished = false;
-        const argumentList = Array.from(arguments_);
-        while (argumentList.length > 0) {
-            const argument = argumentList.shift() as string;
+
+        enum TOK {
+            UNKNOWN,
+            VALUE,
+            BRACKET_OPEN,
+            BRACKET_CLOSE,
+            SEPARATOR,
+        }
+
+        const tokMap: {[key: string]: TOK} = {
+            '[': TOK.BRACKET_OPEN,
+            ']': TOK.BRACKET_CLOSE,
+            ',': TOK.SEPARATOR,
+        }
+
+        const tokValuePairs = Array.from(arguments_).map(argument => [ TOK.UNKNOWN as TOK, argument ] as const);
+        let withinBrackets = false;
+        while (tokValuePairs.length > 0) {
+            const [ tok, value ] = tokValuePairs.shift() as [ TOK, string ];
             if (!declarationFinished) {
-                if (/^\[[^\]]+]$/.test(argument)) {
-                    // [--foo] or [-f] or [-f,--foo]
-                    // eslint-disable-next-line unicorn/prefer-string-replace-all
-                    const argnames = argument.replace(/^\[|]$/g, '')
-                                            .split(',')
-                                            .map(s => s.trim().replace(/^--?/, ''));
-                    for (const argname of argnames) {
-                        mapping[argname] = lastScriptName;
+                switch (tok) {
+                    case TOK.UNKNOWN: {
+                        const splits = value.split(/([,[\]])/)
+                            .filter(s => s !== '' && s !== undefined)
+                            .reverse() as string[];
+                        for (const split of splits) {
+                            const tok = tokMap[split] || TOK.VALUE;
+                            tokValuePairs.unshift([ tok, split ] as const);
+                        }
+                        continue;
                     }
-                    continue;
-                }
-                if (!argument.startsWith('-')) {
-                    // script-name[--foo][--bar] -> script-name [--foo] [--bar]
-                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[[^\]]+])/);
-                    if (scriptName) {
-                        scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
-                        lastScriptName = scriptName;
+                    case TOK.BRACKET_OPEN: {
+                        if (withinBrackets) {
+                            throw new ParseError(`Unexpected '${value}'`);
+                        }
+                        withinBrackets = true;
+                        continue;
                     }
-                    argumentList.unshift(...interleavedArguments.filter(s => s !== '' && s !== undefined));
-                    continue;
-                }
-                if (argument == '--') {
-                    declarationFinished = true;
-                    continue;
+                    case TOK.BRACKET_CLOSE: {
+                        if (!withinBrackets) {
+                            throw new ParseError(`Unexpected '${value}'`);
+                        }
+                        withinBrackets = false;
+                        continue;
+                    }
+                    case TOK.SEPARATOR: {
+                        if (!withinBrackets) {
+                            throw new ParseError(`Unexpected '${value}'`);
+                        }
+                        continue;
+                    }
+                    case TOK.VALUE: {
+                        if (withinBrackets) {
+                            const argname = value.replace(/^--?/, '');
+                            mapping[argname] = mapping[argname] ?? [];
+                            mapping[argname].push(lastScriptName);
+                            continue;
+                        }
+                        if (!withinBrackets && !value.startsWith('-')) {
+                            scriptArguments[value] = scriptArguments[value] ?? [];
+                            lastScriptName = value;
+                            continue;
+                        }
+                        declarationFinished = true;
+                        if (value === '--') {
+                            continue;
+                        }
+                    }
                 }
             }
 
-            declarationFinished = true;
+            const argument = value;
             // eslint-disable-next-line unicorn/prefer-string-replace-all
             const argname = argument.replace(/^--?|=.*$/g, '');
-            const scriptName = mapping[argname] ?? mapping['...'] ?? undefined;
-            if (scriptName) {
-                scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
-                scriptArguments[scriptName].push(argument);
+            const scriptNames = mapping[argname] ?? mapping['...'] ?? undefined;
+            if (scriptNames) {
+                for (const scriptName of scriptNames) {
+                    scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
+                    scriptArguments[scriptName].push(argument);
+                }
             }
             else {
-                throw new Error(`Unknown argument '${argument}'`);
+                throw new ParseError(`Unknown argument '${argument}'`);
             }
         }
+        if (withinBrackets) {
+            throw new ParseError(`Missing ']'`);
+        }
+    }
+}
+
+class ParseError extends Error {
+    constructor(message: string) {
+        super(message);
     }
 }
