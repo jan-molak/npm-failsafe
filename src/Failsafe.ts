@@ -83,7 +83,7 @@ export class Failsafe {
         });
     }
 
-    private parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
+    protected parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
         const mapping: {[argname: string]: string} = {};
         let lastScriptName = '';
         let declarationFinished = false;
@@ -91,25 +91,25 @@ export class Failsafe {
         while (argumentList.length > 0) {
             const argument = argumentList.shift() as string;
             if (!declarationFinished) {
-                if (argument === '[...]') {
-                    mapping['...'] = lastScriptName;
-                    continue;
-                }
-                if (argument.startsWith('[') && argument.endsWith(']')) {
-                    // [--foo]
-                    const argname = argument.replaceAll(/^\[-?-?|]$/g, '');
-                    mapping[argname] = lastScriptName;
+                if (/^\[[^\]]+]$/.test(argument)) {
+                    // [--foo] or [-f] or [-f,--foo]
+                    // eslint-disable-next-line unicorn/prefer-string-replace-all
+                    const argnames = argument.replace(/^\[|]$/g, '')
+                                            .split(',')
+                                            .map(s => s.trim().replace(/^--?/, ''));
+                    for (const argname of argnames) {
+                        mapping[argname] = lastScriptName;
+                    }
                     continue;
                 }
                 if (!argument.startsWith('-')) {
                     // script-name[--foo][--bar] -> script-name [--foo] [--bar]
-                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[.+?])/).filter(s => s !== '' && s !== undefined);
-                    if (!scriptName) {
-                        throw new Error(`Unknown argument '${argument}'`);
+                    const [ scriptName, ...interleavedArguments ] = argument.split(/(\[[^\]]+])/);
+                    if (scriptName) {
+                        scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
+                        lastScriptName = scriptName;
                     }
-                    scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
-                    lastScriptName = scriptName;
-                    argumentList.unshift(...interleavedArguments);
+                    argumentList.unshift(...interleavedArguments.filter(s => s !== '' && s !== undefined));
                     continue;
                 }
                 if (argument == '--') {
@@ -119,7 +119,8 @@ export class Failsafe {
             }
 
             declarationFinished = true;
-            const argname = argument.replaceAll(/^--?|=.*$/g, '');
+            // eslint-disable-next-line unicorn/prefer-string-replace-all
+            const argname = argument.replace(/^--?|=.*$/g, '');
             const scriptName = mapping[argname] ?? mapping['...'] ?? undefined;
             if (scriptName) {
                 scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];

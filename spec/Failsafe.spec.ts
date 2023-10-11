@@ -291,7 +291,47 @@ describe(`Failsafe`, function() {
         });
 
     });
+
+    describe('Parse Arguments', () => {
+
+        const cases = [
+            {
+                'inputs': [
+                    ['print-args', '[--foo]', '[--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[--foo][--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args[--foo][--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args[--foo,--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[--foo,--bar]', '--foo=bar', '--bar=foo'],
+                    // ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo'],
+                ],
+                'output': { 'print-args': ['--foo=bar', '--bar=foo'] },
+            }
+        ];
+
+        it(`should parse arguments as expected`, async () => {
+            for (const { inputs, output } of cases) {
+                for (const input of inputs) {
+                    const actual: {[script: string]: string[]} = {};
+                    const logger = new AccumulatingLogger();
+                    const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
+                    try {
+                        failsafe.parseArguments(input, actual);
+                    }
+                    catch (error: any) {
+                        expect.fail(`Expected ${JSON.stringify(input)} to be parsed as ${JSON.stringify(output)}, but got error: ${error}`);
+                    }
+                    expect(actual).to.deep.equal(output, `Expected ${JSON.stringify(input)} to be parsed as ${JSON.stringify(output)}`);
+                }
+            }
+        })
+    });
 });
+
+class TestFailsafe extends Failsafe {
+    parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
+        super.parseArguments(arguments_, scriptArguments);
+    }
+}
 
 function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env = { }): { run: (scriptsName: string[]) => Promise<ExitCode>, logger: AccumulatingLogger } {
     const logger = new AccumulatingLogger();
