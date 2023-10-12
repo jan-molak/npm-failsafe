@@ -159,8 +159,7 @@ export class Failsafe {
             }
 
             const argument = value;
-            // eslint-disable-next-line unicorn/prefer-string-replace-all
-            const argname = argument.replace(/^--?|=.*$/g, '');
+            const argname = argument.replaceAll(/^--?|=.*$/g, '');
             const scriptNames = mapping[argname] ?? mapping['...'] ?? undefined;
             if (scriptNames) {
                 for (const scriptName of scriptNames) {
