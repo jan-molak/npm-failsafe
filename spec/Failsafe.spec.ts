@@ -180,7 +180,37 @@ describe(`Failsafe`, function() {
             const exitCode = await run([`print-args`, '--foo=bar', '--bar=foo']);
             expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
 
-            expect(logger.stderr()).to.include(`Unknown argument '--foo=bar'`);
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unknown argument '--foo=bar' at position 12:`,
+                `[failsafe]   print-args --foo=bar `,
+                `[failsafe]   -----------^`,
+            ].join('\n'));
+        });
+
+        it(`fails on missing brackets`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[`, '--foo=bar']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Missing ']' at position 23:`,
+                `[failsafe]   print-args [ --foo=bar`,
+                `[failsafe]   ----------------------^`,
+            ].join('\n'));
+        });
+
+        it(`fails on missing separator or end bracket`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[`, '--foo', '--bar', ']']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unexpected '--bar', expected either ',' or ']' at position 19:`,
+                `[failsafe]   print-args [ --foo --bar`,
+                `[failsafe]   ------------------^`,
+            ].join('\n'));
         });
 
         it(`passes specific arguments`, async () => {
@@ -297,9 +327,8 @@ describe(`Failsafe`, function() {
             },
             {
                 'inputs': [
-                    ['['],
                     ['print-args', '['],
-                    ['print-args', '[', ']', '['],
+                    ['print-args', '[', '--foo'],
                 ],
                 'expected': {
                     'error': "Missing ']'",
@@ -307,6 +336,16 @@ describe(`Failsafe`, function() {
             },
             {
                 'inputs': [
+                    ['print-args', '[', ']'],
+                    ['print-args', '[]'],
+                ],
+                'expected': {
+                    'error': 'Missing some argument',
+                },
+            },
+            {
+                'inputs': [
+                    ['['],
                     ['print-args', '[['],
                 ],
                 'expected': {

@@ -23,7 +23,14 @@ export class Failsafe {
         try {
             this.parseArguments(arguments_, scriptArguments);
         } catch (error: any) {
-            this.logger.error('failsafe', `${error}`);
+            if (error instanceof ParseError) {
+                this.logger.error('failsafe', `Error: ${error.message} at position ${error.position}:`)
+                this.logger.error('failsafe', `  ${error.parsed}`)
+                this.logger.error('failsafe', `  ${'-'.repeat(Math.max(0,error.position-1))}^`);
+            } else {
+                // istanbul ignore next
+                this.logger.error('failsafe', `${error}`);
+            }
             return 1;
         }
 
@@ -103,7 +110,9 @@ export class Failsafe {
         }
 
         const tokValuePairs = Array.from(arguments_).map(argument => [ TOK.UNKNOWN as TOK, argument ] as const);
+        let lastKnownTok = TOK.UNKNOWN;
         let withinBrackets = false;
+        let parsed = '';
         while (tokValuePairs.length > 0) {
             const [ tok, value ] = tokValuePairs.shift() as [ TOK, string ];
             if (!declarationFinished) {
@@ -119,27 +128,41 @@ export class Failsafe {
                         continue;
                     }
                     case TOK.BRACKET_OPEN: {
-                        if (withinBrackets) {
-                            throw new ParseError(`Unexpected '${value}'`);
+                        parsed += value;
+                        if (withinBrackets || (lastKnownTok !== TOK.VALUE && lastKnownTok !== TOK.BRACKET_CLOSE)) {
+                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
                         }
+                        lastKnownTok = tok;
                         withinBrackets = true;
                         continue;
                     }
                     case TOK.BRACKET_CLOSE: {
+                        if (lastKnownTok !== TOK.VALUE) {
+                            throw new ParseError(`Missing some argument`, parsed, parsed.length - value.length);
+                        }
+                        parsed += ' '+value+' ';
+                        lastKnownTok = tok;
                         if (!withinBrackets) {
-                            throw new ParseError(`Unexpected '${value}'`);
+                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
                         }
                         withinBrackets = false;
                         continue;
                     }
                     case TOK.SEPARATOR: {
+                        parsed += value;
+                        lastKnownTok = tok;
                         if (!withinBrackets) {
-                            throw new ParseError(`Unexpected '${value}'`);
+                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
                         }
                         continue;
                     }
                     case TOK.VALUE: {
                         if (withinBrackets) {
+                            parsed += ' '+value;
+                            if (lastKnownTok !== TOK.BRACKET_OPEN && lastKnownTok !== TOK.SEPARATOR) {
+                                throw new ParseError(`Unexpected '${value}', expected either ',' or ']'`, parsed, parsed.length - value.length);
+                            }
+                            lastKnownTok = tok;
                             const argname = value.replace(/^--?/, '');
                             mapping[argname] = mapping[argname] ?? [];
                             mapping[argname].push(lastScriptName);
@@ -148,15 +171,21 @@ export class Failsafe {
                         if (!withinBrackets && !value.startsWith('-')) {
                             scriptArguments[value] = scriptArguments[value] ?? [];
                             lastScriptName = value;
+                            parsed += value+' ';
+                            lastKnownTok = tok;
                             continue;
                         }
                         declarationFinished = true;
                         if (value === '--') {
+                            parsed += value+' ';
+                            lastKnownTok = tok;
                             continue;
                         }
                     }
                 }
             }
+            parsed += value+' ';
+            lastKnownTok = tok;
 
             const argument = value;
             const argname = argument.replaceAll(/^--?|=.*$/g, '');
@@ -168,17 +197,17 @@ export class Failsafe {
                 }
             }
             else {
-                throw new ParseError(`Unknown argument '${argument}'`);
+                throw new ParseError(`Unknown argument '${argument}'`, parsed, parsed.length - value.length);
             }
         }
         if (withinBrackets) {
-            throw new ParseError(`Missing ']'`);
+            throw new ParseError(`Missing ']'`, parsed, parsed.length + 1);
         }
     }
 }
 
 class ParseError extends Error {
-    constructor(message: string) {
+    constructor(message: string, readonly parsed: string, readonly position: number) {
         super(message);
     }
 }
