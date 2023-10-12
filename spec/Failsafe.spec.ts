@@ -244,7 +244,6 @@ describe(`Failsafe`, function() {
             ].join('\n'));
         });
 
-
         it(`passes specific argument to multiple scripts`, async () => {
 
             const { run, logger } = failsafe();
@@ -264,8 +263,6 @@ describe(`Failsafe`, function() {
                 `[failsafe] Script 'also-print-args' exited with code 0`,
             ].join('\n'));
         });
-
-
 
     });
 
