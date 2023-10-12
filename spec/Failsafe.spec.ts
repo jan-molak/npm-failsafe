@@ -28,6 +28,19 @@ describe(`Failsafe`, function() {
         ].join('\n'));
     });
 
+    describe(`Help`, () => {
+
+        it(`shows a help/usage message when run with --help argument`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`--help`]);
+
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include('Usage: failsafe');
+        });
+    });
+
     describe(`Returns with an exit code of the executed script, when:`, () => {
         it(`finishes with a success`, () => {
             return expect(failsafe().run([`success`])).to.eventually.equal(Success);
@@ -174,16 +187,71 @@ describe(`Failsafe`, function() {
 
     describe('Pass arguments', () => {
 
-        it(`fails on unknown arguments`, async () => {
+
+        it(`fails on unknown arguments with 1 script`, async () => {
             const { run, logger } = failsafe();
 
-            const exitCode = await run([`print-args`, '--foo=bar', '--bar=foo']);
+            const exitCode = await run([`script`, '--spec=spec/some.spec.ts']);
             expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
 
             expect(logger.stderr()).to.include([
-                `[failsafe] Error: Unknown argument '--foo=bar' at position 12:`,
-                `[failsafe]   print-args --foo=bar `,
-                `[failsafe]   -----------^`,
+                `[failsafe] Error: Unrecognized arguments: --spec=spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe script [--spec]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+        it(`fails on unknown arguments with 2 scripts `, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`foo-script`, `[--foo]`, `bar-script[--bar]`, '--spec', 'spec/some.spec.ts']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --spec spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe foo-script [--foo] bar-script [--bar,--spec,...]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on unknown arguments with 3 scripts`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`clean`, `test`, `report`, '--spec=spec/some.spec.ts']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --spec=spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe clean test [--spec] report",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on multiple unknown arguments which result in wildcards`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`foo-script`, '--foo', 'foo', '--bar', 'bar']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --foo foo --bar bar`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe foo-script [--foo,--bar,...]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
             ].join('\n'));
         });
 
@@ -322,7 +390,7 @@ describe(`Failsafe`, function() {
                     ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo', 'baz'],
                 ],
                 'expected': {
-                    'error': "Unknown argument 'baz'",
+                    'error': 'Unrecognized arguments: baz',
                 },
             },
             {
@@ -373,15 +441,15 @@ describe(`Failsafe`, function() {
         it(`should parse arguments as expected`, async () => {
             for (const { inputs, expected } of cases) {
                 for (const input of inputs) {
-                    const actual: {[script: string]: string[]} = {};
                     const logger = new AccumulatingLogger();
                     const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
                     if (expected.output) {
-                        failsafe.parseArguments(input, actual);
+                        failsafe.parseArguments(input);
+                        const actual = failsafe.getScriptArguments();
                         expect(actual).to.deep.equal(expected.output);
                     }
                     if (expected.error) {
-                        expect(() => failsafe.parseArguments(input, actual)).to.throw(expected.error);
+                        expect(() => failsafe.parseArguments(input)).to.throw(expected.error);
                     }
                 }
             }
@@ -390,8 +458,12 @@ describe(`Failsafe`, function() {
 });
 
 class TestFailsafe extends Failsafe {
-    parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
-        super.parseArguments(arguments_, scriptArguments);
+    parseArguments(arguments_: string[]): void {
+        super.parseArguments(arguments_);
+    }
+
+    getScriptArguments(): {[script: string]: string[]} {
+        return this.scriptArguments;
     }
 }
 
@@ -438,6 +510,10 @@ class AccumulatingLogger implements Logger {
         public readonly infoEntries: string[] = [],
         public readonly errorEntries: string[] = [],
     ) {
+    }
+
+    help(line: string): void {
+        this.infoEntries.push(`${ line }`);
     }
 
     info(script_name: string, line: string) {

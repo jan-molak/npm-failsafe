@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 import readline = require('readline');
 
+import * as packageJson from '../package.json';
 import { Logger } from './logger';
 
 export interface FailsafeConfig {
@@ -11,6 +12,9 @@ export interface FailsafeConfig {
 export type ExitCode = number;
 export class Failsafe {
 
+    protected scriptArguments: {[script: string]: string[]} = {};
+    protected mapping: {[argname: string]: string[]} = {};
+
     constructor(
         private readonly logger: Logger,
         private readonly config: FailsafeConfig,
@@ -18,23 +22,69 @@ export class Failsafe {
     ) {
     }
 
+    async help(): Promise<ExitCode> {
+        this.logger.help(`Usage: failsafe [options]`);
+        this.logger.help(``);
+        this.logger.help(`Description:`);
+        this.logger.help(`   Executes a sequence of npm scripts and returns`);
+        this.logger.help(`   the correct exit code should any of them fail.`);
+        this.logger.help(``);
+        this.logger.help(`Example:`);
+        this.logger.help(`   Suppose you have the following npm scripts defined:`);
+        this.logger.help(`       "scripts": {`);
+        this.logger.help(`           "clean": "rimraf target",`);
+        this.logger.help(`           "test": "failsafe clean test:playwright [--spec,...] test:report [--destination]",`);
+        this.logger.help(`           "test:playwright": "playwright test",`);
+        this.logger.help(`           "test:report": "serenity-bdd run",`);
+        this.logger.help(`       }`);
+        this.logger.help(``);
+        this.logger.help(`   Then you can run the following command:`);
+        this.logger.help(`       npm run test -- --spec spec/**/*.spec.ts --destination=reports`);
+        this.logger.help(``);
+        this.logger.help(`   It will run all the following commands in sequence`);
+        this.logger.help(`   and then returns the highest exit code:`);
+        this.logger.help(`       1. rimraf target`);
+        this.logger.help(`       2. playwright test --spec spec/**/*.spec.ts`);
+        this.logger.help(`       3. serenity-bdd run --destination=reports`);
+        this.logger.help(``);
+        this.logger.help(`Info:`);
+        this.logger.help(`  Version: ${packageJson.version}`);
+        this.logger.help(`  Author: ${packageJson.author}`);
+        this.logger.help(`  License: ${packageJson.license}`);
+        this.logger.help(`  Homepage: ${packageJson.homepage}`);
+        this.logger.help(``);
+        return 0;
+    }
+
     async run(arguments_: string[]): Promise<ExitCode> {
-        const scriptArguments: {[script: string]: string[]} = {};
+
+        if (arguments_.length === 1 && ['--help','-help','-h','-usage','--usage'].includes(arguments_[0])) {
+            return this.help();
+        }
+
         try {
-            this.parseArguments(arguments_, scriptArguments);
+            this.parseArguments(arguments_);
         } catch (error: any) {
             if (error instanceof ParseError) {
                 this.logger.error('failsafe', `Error: ${error.message} at position ${error.position}:`)
                 this.logger.error('failsafe', `  ${error.parsed}`)
                 this.logger.error('failsafe', `  ${'-'.repeat(Math.max(0,error.position-1))}^`);
+            } else if (error instanceof UnrecognizedArgumentsError) {
+                this.logger.error('failsafe', `Error: ${error.message}`);
+                this.logger.error('failsafe', `Notice: To configure your project to recognize them you might want`);
+                this.logger.error('failsafe', `        to change your package.json scripts to something like:`);
+                this.logger.error('failsafe', `            "scripts": {`);
+                this.logger.error('failsafe', `                "script": ${JSON.stringify(this.recommendCommand(error.unrecognizedArguments))},`);
+                this.logger.error('failsafe', `            }`);
+                this.logger.error('failsafe', `        For details see: https://github.com/jan-molak/npm-failsafe`);
             } else {
                 // istanbul ignore next
-                this.logger.error('failsafe', `${error}`);
+                this.logger.error('failsafe', `Error: ${error.message}`);
             }
             return 1;
         }
 
-        const scriptsName = Object.keys(scriptArguments);
+        const scriptsName = Object.keys(this.scriptArguments);
 
         if (scriptsName.length === 0) {
             this.logger.error('failsafe', [
@@ -47,7 +97,7 @@ export class Failsafe {
 
         return scriptsName.reduce((previous: Promise<ExitCode>, script_name: string) => {
             return previous
-                .then(previous_exit_code => this.runScript(script_name, scriptArguments[script_name])
+                .then(previous_exit_code => this.runScript(script_name, this.scriptArguments[script_name])
                     .then(current_exit_code => Math.max(previous_exit_code, current_exit_code)));
         }, Promise.resolve(0));
     }
@@ -90,8 +140,45 @@ export class Failsafe {
         });
     }
 
-    protected parseArguments(arguments_: string[], scriptArguments: {[script: string]: string[]}): void {
-        const mapping: {[argname: string]: string[]} = {};
+    protected recommendCommand(unrecognizedArguments: string[]): string {
+        const result = ['failsafe']
+        const scriptNames = Object.keys(this.scriptArguments);
+
+        for (let i = 0; i < scriptNames.length; i++) {
+            const scriptName = scriptNames[i];
+            result.push(scriptName);
+            const argumentsForScript = Object.entries(this.mapping)
+                .filter(([argname, scriptNames]) => scriptNames.includes(scriptName))
+                .map(([argname]) => argname === '...' ? argname : (argname.length == 1 ? `-${argname}` : `--${argname}`));
+            if (i == Math.min(1, scriptNames.length - 1)) {
+                argumentsForScript.push(...unrecognizedArguments);
+            }
+            if (argumentsForScript.length > 0) {
+                const argumentPattern = []
+                let wildcard = false;
+                for (const value of argumentsForScript) {
+                    if (value.startsWith('-')) {
+                        const argname = value.replaceAll(/^--?|=.*$/g, '');
+                        argumentPattern.push(argname.length == 1 ? `-${argname}` : `--${argname}`);
+                    } else {
+                        wildcard = true;
+                    }
+                }
+                if (wildcard) {
+                    argumentPattern.push('...')
+                }
+                result.push(`[${argumentPattern.join(',')}]`);
+            }
+        }
+
+        return result.join(' ');
+    }
+
+    protected parseArguments(arguments_: string[]): void {
+        // reset state
+        this.scriptArguments = {};
+        this.mapping = {};
+
         let lastScriptName = '';
         let declarationFinished = false;
 
@@ -113,6 +200,7 @@ export class Failsafe {
         let lastKnownTok = TOK.UNKNOWN;
         let withinBrackets = false;
         let parsed = '';
+        const unrecognizedArguments: string[] = [];
         while (tokValuePairs.length > 0) {
             const [ tok, value ] = tokValuePairs.shift() as [ TOK, string ];
             if (!declarationFinished) {
@@ -164,12 +252,12 @@ export class Failsafe {
                             }
                             lastKnownTok = tok;
                             const argname = value.replace(/^--?/, '');
-                            mapping[argname] = mapping[argname] ?? [];
-                            mapping[argname].push(lastScriptName);
+                            this.mapping[argname] = this.mapping[argname] ?? [];
+                            this.mapping[argname].push(lastScriptName);
                             continue;
                         }
                         if (!withinBrackets && !value.startsWith('-')) {
-                            scriptArguments[value] = scriptArguments[value] ?? [];
+                            this.scriptArguments[value] = this.scriptArguments[value] ?? [];
                             lastScriptName = value;
                             parsed += value+' ';
                             lastKnownTok = tok;
@@ -189,25 +277,33 @@ export class Failsafe {
 
             const argument = value;
             const argname = argument.replaceAll(/^--?|=.*$/g, '');
-            const scriptNames = mapping[argname] ?? mapping['...'] ?? undefined;
+            const scriptNames = this.mapping[argname] ?? this.mapping['...'] ?? undefined;
             if (scriptNames) {
                 for (const scriptName of scriptNames) {
-                    scriptArguments[scriptName] = scriptArguments[scriptName] ?? [];
-                    scriptArguments[scriptName].push(argument);
+                    this.scriptArguments[scriptName] = this.scriptArguments[scriptName] ?? [];
+                    this.scriptArguments[scriptName].push(argument);
                 }
             }
             else {
-                throw new ParseError(`Unknown argument '${argument}'`, parsed, parsed.length - value.length);
+                unrecognizedArguments.push(argument);
             }
         }
         if (withinBrackets) {
             throw new ParseError(`Missing ']'`, parsed, parsed.length + 1);
+        }
+        if (unrecognizedArguments.length > 0) {
+            throw new UnrecognizedArgumentsError(`Unrecognized arguments: ${unrecognizedArguments.join(' ')}`, unrecognizedArguments);
         }
     }
 }
 
 class ParseError extends Error {
     constructor(message: string, readonly parsed: string, readonly position: number) {
+        super(message);
+    }
+}
+class UnrecognizedArgumentsError extends Error {
+    constructor(message: string, readonly unrecognizedArguments: string[]) {
         super(message);
     }
 }
