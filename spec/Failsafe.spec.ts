@@ -187,7 +187,6 @@ describe(`Failsafe`, function() {
 
     describe('Pass arguments', () => {
 
-
         it(`fails on unknown arguments with 1 script`, async () => {
             const { run, logger } = failsafe();
 
