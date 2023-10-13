@@ -104,9 +104,9 @@ export class Failsafe {
 
     private runScript(script_name: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = process.env.npm_execpath ?? (process.platform.startsWith('win32')
+            const npm = process.platform.startsWith('win32')
                 ? `npm.cmd`
-                : `npm`);
+                : (process.env.npm_execpath ?? `npm`);
 
             const npmArguments = [`run`, script_name];
             if (arguments_.length > 0) {
