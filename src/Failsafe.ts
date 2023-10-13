@@ -1,8 +1,11 @@
 import { spawn } from 'child_process';
+import * as fs from 'fs';
 import readline = require('readline');
 
-import * as packageJson from '../package.json';
 import { Logger } from './logger';
+import path = require('path');
+
+const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
 
 export interface FailsafeConfig {
     cwd: string;
