@@ -28,6 +28,19 @@ describe(`Failsafe`, function() {
         ].join('\n'));
     });
 
+    describe(`Help`, () => {
+
+        it(`shows a help/usage message when run with --help argument`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`--help`]);
+
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include('Usage: failsafe');
+        });
+    });
+
     describe(`Returns with an exit code of the executed script, when:`, () => {
         it(`finishes with a success`, () => {
             return expect(failsafe().run([`success`])).to.eventually.equal(Success);
@@ -171,7 +184,377 @@ describe(`Failsafe`, function() {
             expect(logger.stdout()).to.include(`[check-ansi-support] Colors not supported`);
         });
     });
+
+    describe('Pass arguments', () => {
+
+        it(`fails on unknown arguments with 1 script`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '--spec=spec/some.spec.ts']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --spec=spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe print-args [--spec]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+        it(`fails on unknown arguments with 2 scripts `, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[--foo]`, `also-print-args[--bar]`, '--spec', 'spec/some.spec.ts']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --spec spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe print-args [--foo] also-print-args [--bar,--spec]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on unknown arguments with 3 scripts`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`clean`, `test`, `report`, '--spec=spec/some.spec.ts']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --spec=spec/some.spec.ts`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe clean test [--spec] report",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on multiple unknown arguments`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '--foo', 'foo', '--bar', 'bar']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: --foo foo --bar bar`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe print-args [--foo,--bar]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on multiple unknown arguments which results in wildcard`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '-v', 'foo', 'bar']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unrecognized arguments: -v foo bar`,
+                `[failsafe] Notice: To configure your project to recognize them you might want`,
+                `[failsafe]         to change your package.json scripts to something like:`,
+                `[failsafe]             "scripts": {`,
+                `[failsafe]                 "script": "failsafe print-args [-v,...]",`,
+                `[failsafe]             }`,
+                `[failsafe]         For details see: `,
+            ].join('\n'));
+        });
+
+        it(`fails on missing brackets`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[`, '--foo=bar']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Missing ']' at position 23:`,
+                `[failsafe]   print-args [ --foo=bar`,
+                `[failsafe]   ----------------------^`,
+            ].join('\n'));
+        });
+
+        it(`fails on missing separator or end bracket`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[`, '--foo', '--bar', ']']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Unexpected '--bar', expected either ',' or ']' at position 19:`,
+                `[failsafe]   print-args [ --foo --bar`,
+                `[failsafe]   ------------------^`,
+            ].join('\n'));
+        });
+
+        it(`passes specific arguments`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run(['print-args[--foo][--bar]', '--foo', '--bar']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "--foo"`,
+                `[print-args] "--bar"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes all arguments`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[...]', '--foo=bar', '--bar=foo']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "--foo=bar"`,
+                `[print-args] "--bar=foo"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes all arguments preserving whitespace`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[...]', '--', '  foo  ', '  bar  ']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "  foo  "`,
+                `[print-args] "  bar  "`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes all arguments after separator`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[...]', '--', 'foo bar', 'baz']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "foo bar"`,
+                `[print-args] "baz"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes different arguments to specifc scripts`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--bar]', '--foo=bar', '--bar=foo']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 1 arguments`,
+                `[print-args] "--foo=bar"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+
+            expect(logger.stdout()).to.include([
+                `[also-print-args] Listing 1 arguments`,
+                `[also-print-args] "--bar=foo"`,
+                `[failsafe] Script 'also-print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes specific argument to multiple scripts`, async () => {
+
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--foo]', '--foo=bar']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 1 arguments`,
+                `[print-args] "--foo=bar"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+
+            expect(logger.stdout()).to.include([
+                `[also-print-args] Listing 1 arguments`,
+                `[also-print-args] "--foo=bar"`,
+                `[failsafe] Script 'also-print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes any argument to multiple scripts`, async () => {
+
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[...]', 'also-print-args', '[...]', '--foo=bar', 'some/filename']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "--foo=bar"`,
+                `[print-args] "some/filename"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+
+            expect(logger.stdout()).to.include([
+                `[also-print-args] Listing 2 arguments`,
+                `[also-print-args] "--foo=bar"`,
+                `[also-print-args] "some/filename"`,
+                `[failsafe] Script 'also-print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+        it(`passes multiple arguments to multiple scripts`, async () => {
+
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[--foo,...]', 'also-print-args', '[--bar,...]', '--foo', '--bar', '--baz']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "--foo"`,
+                `[print-args] "--baz"`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'));
+
+            expect(logger.stdout()).to.include([
+                `[also-print-args] Listing 2 arguments`,
+                `[also-print-args] "--bar"`,
+                `[also-print-args] "--baz"`,
+                `[failsafe] Script 'also-print-args' exited with code 0`,
+            ].join('\n'));
+        });
+
+    });
+
+    describe('Parse Arguments', () => {
+
+        const cases = [
+            {
+                'inputs': [
+                    ['print-args', '[--foo]', '[--bar]', '--foo', 'bar', '--bar', 'foo'],
+                    ['print-args', '[--foo,--bar]', '--foo', 'bar', '--bar', 'foo'],
+                    ['print-args[--foo,--bar]', '--foo', 'bar', '--bar', 'foo'],
+                    ['print-args', '[', '...', ']', '--foo', 'bar', '--bar', 'foo'],
+                    ['print-args', '[...]', '--foo', 'bar', '--bar', 'foo'],
+                    ['print-args[...]', '--foo', 'bar', '--bar', 'foo'],
+                ],
+                'expected': {
+                    'output': { 'print-args': ['--foo', 'bar', '--bar', 'foo'] }
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '[--foo]', '[--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[--foo][--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args[--foo][--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args[--foo,--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[--foo,--bar]', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo'],
+                    ['print-args', '[...]', '--foo=bar', '--bar=foo'],
+                    ['print-args[...]', '--foo=bar', '--bar=foo'],
+                ],
+                'expected': {
+                    'output': { 'print-args': ['--foo=bar', '--bar=foo'] }
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '[--foo]', '[--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[--foo][--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args[--foo][--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args[--foo,--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[--foo,--bar]', '--foo=bar', '--bar=foo', 'baz'],
+                    ['print-args', '[', '--foo,', '--bar', ']', '--foo=bar', '--bar=foo', 'baz'],
+                ],
+                'expected': {
+                    'error': 'Unrecognized arguments: baz',
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '['],
+                    ['print-args', '[', '--foo'],
+                ],
+                'expected': {
+                    'error': "Missing ']'",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', '[', ']'],
+                    ['print-args', '[]'],
+                ],
+                'expected': {
+                    'error': 'Missing some argument',
+                },
+            },
+            {
+                'inputs': [
+                    ['['],
+                    ['print-args', '[['],
+                ],
+                'expected': {
+                    'error': "Unexpected '['",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', ']'],
+                ],
+                'expected': {
+                    'error': "Unexpected ']'",
+                },
+            },
+            {
+                'inputs': [
+                    ['print-args', ','],
+                ],
+                'expected': {
+                    'error': "Unexpected ','",
+                },
+            },
+        ];
+
+        it(`should parse arguments as expected`, async () => {
+            for (const { inputs, expected } of cases) {
+                for (const input of inputs) {
+                    const logger = new AccumulatingLogger();
+                    const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
+                    if (expected.output) {
+                        failsafe.parseArguments(input);
+                        const actual = failsafe.getScriptArguments();
+                        expect(actual).to.deep.equal(expected.output);
+                    }
+                    if (expected.error) {
+                        expect(() => failsafe.parseArguments(input)).to.throw(expected.error);
+                    }
+                }
+            }
+        })
+    });
 });
+
+class TestFailsafe extends Failsafe {
+    parseArguments(arguments_: string[]): void {
+        super.parseArguments(arguments_);
+    }
+
+    getScriptArguments(): {[script: string]: string[]} {
+        return this.scriptArguments;
+    }
+}
 
 function failsafe(config: Partial<FailsafeConfig> = {}, env: typeof process.env = { }): { run: (scriptsName: string[]) => Promise<ExitCode>, logger: AccumulatingLogger } {
     const logger = new AccumulatingLogger();
@@ -216,6 +599,10 @@ class AccumulatingLogger implements Logger {
         public readonly infoEntries: string[] = [],
         public readonly errorEntries: string[] = [],
     ) {
+    }
+
+    help(line: string): void {
+        this.infoEntries.push(`${ line }`);
     }
 
     info(script_name: string, line: string) {

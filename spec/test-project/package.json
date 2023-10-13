@@ -5,6 +5,8 @@
   "main": "index.js",
   "scripts": {
     "success": "node scripts/ends-with-success.js",
+    "print-args": "node scripts/print-args.js",
+    "also-print-args": "node scripts/print-args.js",
     "general-failure": "node scripts/ends-with-general-failure.js",
     "buffered-output": "node scripts/buffered-output.js",
     "check-ansi-support": "node scripts/check-ansi-support.js"
