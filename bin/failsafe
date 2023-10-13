@@ -1,5 +1,5 @@
 #!/usr/bin/env node
 
-require('../lib/index')
+require('../lib/src/index')
     .run(process.argv.slice(2))
     .then(exit_code => process.exit(exit_code));

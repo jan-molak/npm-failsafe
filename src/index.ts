@@ -1,7 +1,7 @@
 import { Failsafe } from './Failsafe';
 import { ConsoleLogger } from './logger';
 
-export async function run(scripts: string[]): Promise<number> {
+export async function run(arguments_: string[]): Promise<number> {
     const failsafe = new Failsafe(
         new ConsoleLogger(),
         {
@@ -11,5 +11,5 @@ export async function run(scripts: string[]): Promise<number> {
         process.env
     );
 
-    return failsafe.run(scripts.map(script => script.trim()));
+    return failsafe.run(arguments_);
 }

@@ -76,7 +76,7 @@ export class Failsafe {
                 this.logger.error('failsafe', `            "scripts": {`);
                 this.logger.error('failsafe', `                "script": ${JSON.stringify(this.recommendCommand(error.unrecognizedArguments))},`);
                 this.logger.error('failsafe', `            }`);
-                this.logger.error('failsafe', `        For details see: https://github.com/jan-molak/npm-failsafe`);
+                this.logger.error('failsafe', `        For details see: ${packageJson.homepage}`);
             } else {
                 // istanbul ignore next
                 this.logger.error('failsafe', `Error: ${error.message}`);
@@ -104,9 +104,9 @@ export class Failsafe {
 
     private runScript(script_name: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = process.platform.startsWith('win32')
+            const npm = process.env.npm_execpath ?? (process.platform.startsWith('win32')
                 ? `npm.cmd`
-                : `npm`;
+                : `npm`);
 
             const npmArguments = [`run`, script_name];
             if (arguments_.length > 0) {
@@ -156,11 +156,14 @@ export class Failsafe {
             if (argumentsForScript.length > 0) {
                 const argumentPattern = []
                 let wildcard = false;
+                let expectArgumentValue = false;
                 for (const value of argumentsForScript) {
                     if (value.startsWith('-')) {
                         const argname = value.replaceAll(/^--?|=.*$/g, '');
+                        const argvalue = value.replace(/^[^=]*=?/, '');
                         argumentPattern.push(argname.length == 1 ? `-${argname}` : `--${argname}`);
-                    } else {
+                        expectArgumentValue = argname.length > 1 && argvalue === ''
+                    } else if (!expectArgumentValue) {
                         wildcard = true;
                     }
                 }
@@ -198,6 +201,7 @@ export class Failsafe {
 
         const tokValuePairs = Array.from(arguments_).map(argument => [ TOK.UNKNOWN as TOK, argument ] as const);
         let lastKnownTok = TOK.UNKNOWN;
+        let expectArgumentValueFor: string | null = null;
         let withinBrackets = false;
         let parsed = '';
         const unrecognizedArguments: string[] = [];
@@ -208,8 +212,8 @@ export class Failsafe {
                     case TOK.UNKNOWN: {
                         const splits = value.split(/([,[\]])/)
                             .filter(s => s !== '' && s !== undefined)
-                            .reverse() as string[];
-                        for (const split of splits) {
+                            .map(s => s.trim()) as string[];
+                        for (const split of splits.reverse()) {
                             const tok = tokMap[split] || TOK.VALUE;
                             tokValuePairs.unshift([ tok, split ] as const);
                         }
@@ -276,8 +280,15 @@ export class Failsafe {
             lastKnownTok = tok;
 
             const argument = value;
-            const argname = argument.replaceAll(/^--?|=.*$/g, '');
-            const scriptNames = this.mapping[argname] ?? this.mapping['...'] ?? undefined;
+            let argname = argument.replaceAll(/^--?|=.*$/g, '');
+            const argvalue = argument.replace(/^[^=]*=?/, '');
+            if (argname === argument) {
+                argname = ''
+            }
+            if (!argument.startsWith('-') && expectArgumentValueFor !== null) {
+                argname = expectArgumentValueFor;
+            }
+            const scriptNames = (argname === '' ? undefined : this.mapping[argname]) ?? this.mapping['...'] ?? undefined;
             if (scriptNames) {
                 for (const scriptName of scriptNames) {
                     this.scriptArguments[scriptName] = this.scriptArguments[scriptName] ?? [];
@@ -286,6 +297,15 @@ export class Failsafe {
             }
             else {
                 unrecognizedArguments.push(argument);
+            }
+
+            if (argument.startsWith('-') && argname.length > 1 && argvalue === '') {
+                // multi-character arguments might have values
+                expectArgumentValueFor = argname;
+            }
+            else if (argument.startsWith('-') && argname.length === 1) {
+                // single character arguments do not have values
+                expectArgumentValueFor = null;
             }
         }
         if (withinBrackets) {
