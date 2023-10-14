@@ -2,7 +2,7 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import readline = require('readline');
 
-import { Logger } from './logger';
+import { Logger, trimmed } from './logger';
 import path = require('path');
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
@@ -26,36 +26,39 @@ export class Failsafe {
     }
 
     async help(): Promise<ExitCode> {
-        this.logger.help(`Usage: failsafe [options]`);
-        this.logger.help(``);
-        this.logger.help(`Description:`);
-        this.logger.help(`   Executes a sequence of npm scripts and returns`);
-        this.logger.help(`   the correct exit code should any of them fail.`);
-        this.logger.help(``);
-        this.logger.help(`Example:`);
-        this.logger.help(`   Suppose you have the following npm scripts defined:`);
-        this.logger.help(`       "scripts": {`);
-        this.logger.help(`           "clean": "rimraf target",`);
-        this.logger.help(`           "test": "failsafe clean test:playwright [--spec,...] test:report [--destination]",`);
-        this.logger.help(`           "test:playwright": "playwright test",`);
-        this.logger.help(`           "test:report": "serenity-bdd run",`);
-        this.logger.help(`       }`);
-        this.logger.help(``);
-        this.logger.help(`   Then you can run the following command:`);
-        this.logger.help(`       npm run test -- --spec spec/**/*.spec.ts --destination=reports`);
-        this.logger.help(``);
-        this.logger.help(`   It will run all the following commands in sequence`);
-        this.logger.help(`   and then returns the highest exit code:`);
-        this.logger.help(`       1. rimraf target`);
-        this.logger.help(`       2. playwright test --spec spec/**/*.spec.ts`);
-        this.logger.help(`       3. serenity-bdd run --destination=reports`);
-        this.logger.help(``);
-        this.logger.help(`Info:`);
-        this.logger.help(`  Version: ${packageJson.version}`);
-        this.logger.help(`  Author: ${packageJson.author}`);
-        this.logger.help(`  License: ${packageJson.license}`);
-        this.logger.help(`  Homepage: ${packageJson.homepage}`);
-        this.logger.help(``);
+        this.logger.help(trimmed`
+            | Usage: failsafe [options]
+            | 
+            | Description:
+            |    Executes a sequence of npm scripts and returns
+            |    the correct exit code should any of them fail.
+            | 
+            | Example:
+            |    Given you have the following npm scripts defined:
+            |        "scripts": {
+            |            "clean": "rimraf target",
+            |            "test": "failsafe clean test:playwright [--spec,...] test:report [--destination]",
+            |            "test:playwright": "playwright test",
+            |            "test:report": "serenity-bdd run",
+            |        }
+            | 
+            |    When you run the following command:
+            |        npm run test -- --spec "spec/**/*.spec.ts" --destination=reports
+            | 
+            |    Then all the following commands are executed in a sequence
+            |    and the highest exit code is returned:
+            |        1. rimraf target
+            |        2. playwright test --spec spec/**/*.spec.ts
+            |        3. serenity-bdd run --destination=reports
+            | 
+            | Info:
+            |   Version: ${ packageJson.version }
+            |   Author: ${ packageJson.author }
+            |   License: ${ packageJson.license }
+            |   Homepage: ${ packageJson.homepage }
+            |`
+        );
+
         return 0;
     }
 
@@ -67,51 +70,62 @@ export class Failsafe {
 
         try {
             this.parseArguments(arguments_);
-        } catch (error: any) {
+        }
+        catch (error: any) {
             if (error instanceof ParseError) {
-                this.logger.error('failsafe', `Error: ${error.message} at position ${error.position}:`)
-                this.logger.error('failsafe', `  ${error.parsed}`)
-                this.logger.error('failsafe', `  ${'-'.repeat(Math.max(0,error.position-1))}^`);
-            } else if (error instanceof UnrecognizedArgumentsError) {
-                this.logger.error('failsafe', `Error: ${error.message}`);
-                this.logger.error('failsafe', `Notice: To configure your project to recognize them you might want`);
-                this.logger.error('failsafe', `        to change your package.json scripts to something like:`);
-                this.logger.error('failsafe', `            "scripts": {`);
-                this.logger.error('failsafe', `                "script": ${JSON.stringify(this.recommendCommand(error.unrecognizedArguments))},`);
-                this.logger.error('failsafe', `            }`);
-                this.logger.error('failsafe', `        For details see: ${packageJson.homepage}`);
-            } else {
-                // istanbul ignore next
-                this.logger.error('failsafe', `Error: ${error.message}`);
+                this.logger.error('failsafe', trimmed`
+                    | Error: ${ error.message } at position ${ error.position }:
+                    |   ${ error.parsed }
+                    |   ${ '-'.repeat(Math.max(0, error.position - 1)) }^
+                    |`);
             }
+            else if (error instanceof UnrecognizedArgumentsError) {
+                this.logger.error('failsafe', trimmed`
+                    | Error: ${ error.message }
+                    | Notice: To configure your project to recognize them you might want
+                    |         to change your package.json scripts to something like:
+                    |             "scripts": {
+                    |                 "script": ${ JSON.stringify(this.recommendCommand(error.unrecognizedArguments)) },
+                    |             }
+                    |         For details see: ${ packageJson.homepage }
+                    |`);
+            }
+            else {
+                // istanbul ignore next
+                this.logger.error('failsafe', `Error: ${ error.message }`);
+            }
+
             return 1;
         }
 
-        const scriptsName = Object.keys(this.scriptArguments);
+        const scriptNames = Object.keys(this.scriptArguments);
 
-        if (scriptsName.length === 0) {
-            this.logger.error('failsafe', [
-                `Please specify which npm scripts you'd like to run, for example:`,
-                `  npm failsafe start test`
-            ].join('\n'));
+        if (scriptNames.length === 0) {
+            this.logger.error('failsafe', trimmed`
+                | Please specify which npm scripts you'd like to run, for example:
+                |   npm failsafe start test
+                |`
+            );
 
             return 1;
         }
 
-        return scriptsName.reduce((previous: Promise<ExitCode>, script_name: string) => {
+        return scriptNames.reduce((previous: Promise<ExitCode>, scriptName: string) => {
             return previous
-                .then(previous_exit_code => this.runScript(script_name, this.scriptArguments[script_name])
-                    .then(current_exit_code => Math.max(previous_exit_code, current_exit_code)));
+                .then(previous_exit_code =>
+                    this.runScript(scriptName, this.scriptArguments[scriptName])
+                        .then(current_exit_code => Math.max(previous_exit_code, current_exit_code))
+                );
         }, Promise.resolve(0));
     }
 
-    private runScript(script_name: string, arguments_: string[] = []): Promise<ExitCode> {
+    private runScript(scriptName: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
             const npm = process.platform.startsWith('win32')
                 ? `npm.cmd`
                 : (process.env.npm_execpath ?? `npm`);
 
-            const npmArguments = [`run`, script_name];
+            const npmArguments = [`run`, scriptName];
             if (arguments_.length > 0) {
                 npmArguments.push('--', ...arguments_);
             }
@@ -127,16 +141,14 @@ export class Failsafe {
                 stdout = readline.createInterface({ input: script.stdout }),
                 stderr = readline.createInterface({ input: script.stderr });
 
-            stdout
-                .on('line', line => this.logger.info(script_name, line));
-            stderr
-                .on('line', line => this.logger.error(script_name, line));
+            stdout.on('line', line => this.logger.info(scriptName, line));
+            stderr.on('line', line => this.logger.error(scriptName, line));
 
             script.once ('close', (code: number | null) => {
                 stdout.close();
                 stderr.close();
 
-                this.logger.info('failsafe', `Script '${script_name}' exited with code ${code}`);
+                this.logger.info('failsafe', `Script '${scriptName}' exited with code ${code}`);
 
                 resolve(code ?? 0);
             });

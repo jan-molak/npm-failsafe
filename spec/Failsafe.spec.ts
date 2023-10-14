@@ -1,12 +1,11 @@
 import 'mocha';
 
 import { given } from 'mocha-testdata';
-import path = require('path');
 
 import { ExitCode, Failsafe, FailsafeConfig } from '../src/Failsafe';
 import { Logger } from '../src/logger';
-
-import expect = require('./expect');
+import { expect } from './expect';
+import path = require('path');
 
 describe(`Failsafe`, function() {
     this.timeout(5000);
@@ -24,7 +23,7 @@ describe(`Failsafe`, function() {
 
         expect(logger.stderr()).to.include([
             `[failsafe] Please specify which npm scripts you'd like to run, for example:`,
-            `  npm failsafe start test`,
+            `[failsafe]   npm failsafe start test`,
         ].join('\n'));
     });
 
@@ -594,23 +593,24 @@ ${ indented(logger.stderr()) }
     `;
 }
 
-class AccumulatingLogger implements Logger {
+class AccumulatingLogger extends Logger {
     constructor(
         public readonly infoEntries: string[] = [],
         public readonly errorEntries: string[] = [],
     ) {
+        super();
     }
 
     help(line: string): void {
         this.infoEntries.push(`${ line }`);
     }
 
-    info(script_name: string, line: string) {
-        this.infoEntries.push(`[${ script_name }] ${ line }`);
+    info(scriptName: string, line: string) {
+        this.infoEntries.push(...this.prefixed(scriptName, line).split('\n'));
     }
 
-    error(script_name: string, line: string) {
-        this.errorEntries.push(`[${ script_name }] ${ line }`);
+    error(scriptName: string, line: string) {
+        this.errorEntries.push(...this.prefixed(scriptName, line).split('\n'));
     }
 
     stdout(): string {
