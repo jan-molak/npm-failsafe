@@ -1,6 +1,8 @@
 export class ArgumentParser {
-    private scriptArguments: {[ script: string ]: string[] } = {};
-    private mapping: { [ argumentName: string ]: string[] } = {};
+    private static wildcard = '...';
+
+    private scriptArguments: { [script: string]: string[] } = {};
+    private mapping: { [argumentName: string]: string[] } = {};
 
     parse(arguments_: string[]): Array<Script> {
         // reset state
@@ -18,7 +20,7 @@ export class ArgumentParser {
             SEPARATOR,
         }
 
-        const tokMap: {[key: string]: TOK} = {
+        const tokMap: { [key: string]: TOK } = {
             '[': TOK.BRACKET_OPEN,
             ']': TOK.BRACKET_CLOSE,
             ',': TOK.SEPARATOR,
@@ -29,7 +31,7 @@ export class ArgumentParser {
         let expectArgumentValueFor: string | null = null;
         let withinBrackets = false;
         let parsed = '';
-        const unrecognizedArguments: string[] = [];
+        const unrecognisedArguments: string[] = [];
         while (tokValuePairs.length > 0) {
             const [ tok, value ] = tokValuePairs.shift() as [ TOK, string ];
             if (!declarationFinished) {
@@ -47,7 +49,7 @@ export class ArgumentParser {
                     case TOK.BRACKET_OPEN: {
                         parsed += value;
                         if (withinBrackets || (lastKnownTok !== TOK.VALUE && lastKnownTok !== TOK.BRACKET_CLOSE)) {
-                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
+                            throw new ParseError(`Unexpected '${ value }'`, parsed, parsed.length - value.length);
                         }
                         lastKnownTok = tok;
                         withinBrackets = true;
@@ -57,10 +59,10 @@ export class ArgumentParser {
                         if (lastKnownTok !== TOK.VALUE) {
                             throw new ParseError(`Missing argument name`, parsed, parsed.length - value.length);
                         }
-                        parsed += ' '+value+' ';
+                        parsed += ' ' + value + ' ';
                         lastKnownTok = tok;
                         if (!withinBrackets) {
-                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
+                            throw new ParseError(`Unexpected '${ value }'`, parsed, parsed.length - value.length);
                         }
                         withinBrackets = false;
                         continue;
@@ -69,66 +71,64 @@ export class ArgumentParser {
                         parsed += value;
                         lastKnownTok = tok;
                         if (!withinBrackets) {
-                            throw new ParseError(`Unexpected '${value}'`, parsed, parsed.length - value.length);
+                            throw new ParseError(`Unexpected '${ value }'`, parsed, parsed.length - value.length);
                         }
                         continue;
                     }
                     case TOK.VALUE: {
                         if (withinBrackets) {
-                            parsed += ' '+value;
+                            parsed += ' ' + value;
                             if (lastKnownTok !== TOK.BRACKET_OPEN && lastKnownTok !== TOK.SEPARATOR) {
-                                throw new ParseError(`Unexpected '${value}', expected either ',' or ']'`, parsed, parsed.length - value.length);
+                                throw new ParseError(`Unexpected '${ value }', expected either ',' or ']'`, parsed, parsed.length - value.length);
                             }
                             lastKnownTok = tok;
-                            const argname = value.replace(/^--?/, '');
-                            this.mapping[argname] = this.mapping[argname] ?? [];
-                            this.mapping[argname].push(lastScriptName);
+                            const argumentName = value.replace(/^--?/, '');
+                            this.mapping[argumentName] = this.mapping[argumentName] ?? [];
+                            this.mapping[argumentName].push(lastScriptName);
                             continue;
                         }
                         if (!withinBrackets && !value.startsWith('-')) {
                             this.scriptArguments[value] = this.scriptArguments[value] ?? [];
                             lastScriptName = value;
-                            parsed += value+' ';
+                            parsed += value + ' ';
                             lastKnownTok = tok;
                             continue;
                         }
                         declarationFinished = true;
                         if (value === '--') {
-                            parsed += value+' ';
+                            parsed += value + ' ';
                             lastKnownTok = tok;
                             continue;
                         }
                     }
                 }
             }
-            parsed += value+' ';
+            parsed += value + ' ';
             lastKnownTok = tok;
 
             const argument = value;
             let argumentName = argument.replaceAll(/^--?|=.*$/g, '');
-            const argvalue = argument.replace(/^[^=]*=?/, '');
+            const argumentValue = argument.replace(/^[^=]*=?/, '');
             if (argumentName === argument) {
                 argumentName = ''
             }
             if (!argument.startsWith('-') && expectArgumentValueFor !== null) {
                 argumentName = expectArgumentValueFor;
             }
-            const scriptNames = (argumentName === '' ? undefined : this.mapping[argumentName]) ?? this.mapping['...'] ?? undefined;
+            const scriptNames = (argumentName === '' ? undefined : this.mapping[argumentName]) ?? this.mapping[ArgumentParser.wildcard] ?? undefined;
             if (scriptNames) {
                 for (const scriptName of scriptNames) {
                     this.scriptArguments[scriptName] = this.scriptArguments[scriptName] ?? [];
                     this.scriptArguments[scriptName].push(argument);
                 }
-            }
-            else {
-                unrecognizedArguments.push(argument);
+            } else {
+                unrecognisedArguments.push(argument);
             }
 
-            if (argument.startsWith('-') && argumentName.length > 1 && argvalue === '') {
+            if (argument.startsWith('-') && argumentName.length > 1 && argumentValue === '') {
                 // multi-character arguments might have values
                 expectArgumentValueFor = argumentName;
-            }
-            else if (argument.startsWith('-') && argumentName.length === 1) {
+            } else if (argument.startsWith('-') && argumentName.length === 1) {
                 // single character arguments do not have values
                 expectArgumentValueFor = null;
             }
@@ -138,10 +138,10 @@ export class ArgumentParser {
             throw new ParseError(`Missing ']'`, parsed, parsed.length + 1);
         }
 
-        if (unrecognizedArguments.length > 0) {
+        if (unrecognisedArguments.length > 0) {
             throw new UnrecognisedArgumentsError(
-                `Unrecognised arguments: ${unrecognizedArguments.join(' ')}`,
-                this.recommendCommand(unrecognizedArguments)
+                `Unrecognised arguments: ${ unrecognisedArguments.join(' ') }`,
+                this.recommendCommand(unrecognisedArguments),
             );
         }
 
@@ -151,18 +151,18 @@ export class ArgumentParser {
         }));
     }
 
-    protected recommendCommand(unrecognizedArguments: string[]): string {
-        const result = ['failsafe']
+    protected recommendCommand(unrecognisedArguments: string[]): string {
+        const result = [ 'failsafe' ]
         const scriptNames = Object.keys(this.scriptArguments);
 
         for (let i = 0; i < scriptNames.length; i++) {
             const scriptName = scriptNames[i];
             result.push(scriptName);
             const argumentsForScript = Object.entries(this.mapping)
-                .filter(([argname, scriptNames]) => scriptNames.includes(scriptName))
-                .map(([argname]) => argname === '...' ? argname : (argname.length == 1 ? `-${argname}` : `--${argname}`));
+                .filter(([ argumentName, scriptNames ]) => scriptNames.includes(scriptName))
+                .map(([ argumentName ]) => argumentName === ArgumentParser.wildcard ? argumentName : (argumentName.length == 1 ? `-${ argumentName }` : `--${ argumentName }`));
             if (i == Math.min(1, scriptNames.length - 1)) {
-                argumentsForScript.push(...unrecognizedArguments);
+                argumentsForScript.push(...unrecognisedArguments);
             }
             if (argumentsForScript.length > 0) {
                 const argumentPattern = []
@@ -170,18 +170,18 @@ export class ArgumentParser {
                 let expectArgumentValue = false;
                 for (const value of argumentsForScript) {
                     if (value.startsWith('-')) {
-                        const argname = value.replaceAll(/^--?|=.*$/g, '');
+                        const argumentName = value.replaceAll(/^--?|=.*$/g, '');
                         const argvalue = value.replace(/^[^=]*=?/, '');
-                        argumentPattern.push(argname.length == 1 ? `-${argname}` : `--${argname}`);
-                        expectArgumentValue = argname.length > 1 && argvalue === ''
+                        argumentPattern.push(argumentName.length == 1 ? `-${ argumentName }` : `--${ argumentName }`);
+                        expectArgumentValue = argumentName.length > 1 && argvalue === ''
                     } else if (!expectArgumentValue) {
                         wildcard = true;
                     }
                 }
                 if (wildcard) {
-                    argumentPattern.push('...')
+                    argumentPattern.push(ArgumentParser.wildcard);
                 }
-                result.push(`[${argumentPattern.join(',')}]`);
+                result.push(`[${ argumentPattern.join(',') }]`);
             }
         }
 
