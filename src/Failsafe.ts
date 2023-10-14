@@ -69,10 +69,20 @@ export class Failsafe {
             return this.help();
         }
 
-        let scripts: Script[];
-
         try {
-            scripts = this.parser.parse(arguments_);
+            const scripts = this.parser.parse(arguments_);
+
+            if (scripts.length === 0) {
+                this.logger.error('failsafe', trimmed`
+                | Please specify which npm scripts you'd like to run, for example:
+                |   npm failsafe start test
+                |`
+                );
+
+                return 1;
+            }
+
+            return await this.runScripts(scripts);
         }
         catch (error: any) {
             if (error instanceof ParseError) {
@@ -100,23 +110,13 @@ export class Failsafe {
 
             return 1;
         }
+    }
 
-        if (scripts.length === 0) {
-            this.logger.error('failsafe', trimmed`
-                | Please specify which npm scripts you'd like to run, for example:
-                |   npm failsafe start test
-                |`
-            );
-
-            return 1;
-        }
-
-        return scripts.reduce((previous: Promise<ExitCode>, script: Script) => {
-            return previous
-                .then(previous_exit_code =>
-                    this.runScript(script.name, script.arguments)
-                        .then(current_exit_code => Math.max(previous_exit_code, current_exit_code))
-                );
+    private async runScripts(scripts: Script[]): Promise<ExitCode> {
+        return await scripts.reduce(async (previous: Promise<ExitCode>, script: Script) => {
+            const previousExitCode = await previous;
+            const currentExitCode = await this.runScript(script.name, script.arguments);
+            return Math.max(previousExitCode, currentExitCode);
         }, Promise.resolve(0));
     }
 
