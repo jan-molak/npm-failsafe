@@ -296,6 +296,19 @@ describe(`Failsafe`, function() {
             ].join('\n'));
         });
 
+        it(`fails on duplicate arguments`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, `[`, '--foo', ',', '--foo', ']']);
+            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+
+            expect(logger.stderr()).to.include([
+                `[failsafe] Error: Duplicate argument '--foo' at position 20:`,
+                `[failsafe]   print-args [ --foo, --foo`,
+                `[failsafe]   -------------------^`,
+            ].join('\n'));
+        });
+
         it(`passes specific arguments`, async () => {
             const { run, logger } = failsafe();
 

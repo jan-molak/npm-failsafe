@@ -84,6 +84,9 @@ export class ArgumentParser {
                             lastKnownTok = tok;
                             const argumentName = value.replace(/^--?/, '');
                             this.mapping[argumentName] = this.mapping[argumentName] ?? [];
+                            if (this.mapping[argumentName].includes(lastScriptName)) {
+                                throw new ParseError(`Duplicate argument '${ value }'`, parsed, parsed.length - value.length);
+                            }
                             this.mapping[argumentName].push(lastScriptName);
                             continue;
                         }
