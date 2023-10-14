@@ -1,5 +1,5 @@
 export class ArgumentParser {
-    private static wildcard = '...';
+    private static WILDCARD = '...';
 
     private scriptArguments: { [script: string]: string[] } = {};
     private mapping: { [argumentName: string]: string[] } = {};
@@ -115,7 +115,11 @@ export class ArgumentParser {
             if (!argument.startsWith('-') && expectArgumentValueFor !== null) {
                 argumentName = expectArgumentValueFor;
             }
-            const scriptNames = (argumentName === '' ? undefined : this.mapping[argumentName]) ?? this.mapping[ArgumentParser.wildcard] ?? undefined;
+            const scriptNames = (argumentName === ''
+                ? undefined
+                : this.mapping[argumentName]
+            ) ?? this.mapping[ArgumentParser.WILDCARD] ?? undefined;
+
             if (scriptNames) {
                 for (const scriptName of scriptNames) {
                     this.scriptArguments[scriptName] = this.scriptArguments[scriptName] ?? [];
@@ -160,8 +164,13 @@ export class ArgumentParser {
             result.push(scriptName);
             const argumentsForScript = Object.entries(this.mapping)
                 .filter(([ argumentName, scriptNames ]) => scriptNames.includes(scriptName))
-                .map(([ argumentName ]) => argumentName === ArgumentParser.wildcard ? argumentName : (argumentName.length == 1 ? `-${ argumentName }` : `--${ argumentName }`));
-            if (i == Math.min(1, scriptNames.length - 1)) {
+                .map(([ argumentName ]) =>
+                    argumentName === ArgumentParser.WILDCARD
+                        ? argumentName
+                        : (argumentName.length === 1 ? `-${ argumentName }` : `--${ argumentName }`)
+                );
+
+            if (i === Math.min(1, scriptNames.length - 1)) {
                 argumentsForScript.push(...unrecognisedArguments);
             }
             if (argumentsForScript.length > 0) {
@@ -171,15 +180,15 @@ export class ArgumentParser {
                 for (const value of argumentsForScript) {
                     if (value.startsWith('-')) {
                         const argumentName = value.replaceAll(/^--?|=.*$/g, '');
-                        const argvalue = value.replace(/^[^=]*=?/, '');
-                        argumentPattern.push(argumentName.length == 1 ? `-${ argumentName }` : `--${ argumentName }`);
-                        expectArgumentValue = argumentName.length > 1 && argvalue === ''
+                        const argumentValue = value.replace(/^[^=]*=?/, '');
+                        argumentPattern.push(argumentName.length === 1 ? `-${ argumentName }` : `--${ argumentName }`);
+                        expectArgumentValue = argumentName.length > 1 && argumentValue === ''
                     } else if (!expectArgumentValue) {
                         wildcard = true;
                     }
                 }
                 if (wildcard) {
-                    argumentPattern.push(ArgumentParser.wildcard);
+                    argumentPattern.push(ArgumentParser.WILDCARD);
                 }
                 result.push(`[${ argumentPattern.join(',') }]`);
             }
