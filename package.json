@@ -27,7 +27,7 @@
     "scripts",
     "ci"
   ],
-  "author": "Jan Molak <jan.molak@smartcodeltd.co.uk>",
+  "author": "Jan Molak <jan.molak@serenity.io>",
   "license": "Apache-2.0",
   "bugs": {
     "url": "https://github.com/jan-molak/npm-failsafe/issues"
