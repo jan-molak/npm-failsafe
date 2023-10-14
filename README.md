@@ -14,36 +14,98 @@
 The `npm-failsafe` lets you execute a sequence of NPM scripts and return the correct exit code
 should any of them fail.
 
-## Usage
-
-**Installation:**
+## Installation
 
 ```
 npm install --save-dev npm-failsafe
 ```
 
-**In your project:**
+## Usage
 
-You should use this to run only scripts which are defined in your `package.json` file. 
-Ideally, you should also provide all args for these scripts upfront, due to the order in which scripts/args are interpreted:
+Failsafe is a command line tool. To view the available options, run the following command in your terminal:
+```
+npx failsafe --help
+```
 
-Each script will be executed with `npm run`.
+## Configuration
 
-*Best practice use case*
+You can use `failsafe` to run scripts defined in your `package.json` file.
+
+### Configuring Failsafe in `package.json`
+
+If your scripts require any arguments, those can be specified upfront in your `package.json` file.
+
+For example, given the below `package.json` file:
 
 ```json
 {
     "scripts": {
         "test": "jest",
         "test:coverage": "npm run test -- --coverage",
-        "lint": "eslint src/*",
+        "lint": "eslint 'src/*'",
         "start": "pm2 start server.js --port=3000",
         "ci": "failsafe start lint test:coverage"
     }
 }
 ```
 
-In the above example, you can see that args for each script on which `failsafe` will run have been provided upfront.
+Running: `npm run ci` will execute:
+- `npm run start`
+- `npm run lint`
+- `npm run test:coverage`, in that order
+
+It will also return the highest exit code of all the executed scripts.
+
+### Configuring Failsafe at runtime
+
+If you need to pass arguments to your scripts at runtime, pass them to `failsafe` directly, and then Failsafe will pass them 
+to your script as per the configuration in your `package.json` file.
+
+For example, given the below `package.json` file:
+```json
+{
+    "scripts": {
+        "test:clean": "rimraf reports",
+        "test:execute": "cucumber-js",
+        "test:report": "serenity-bdd run",
+        "test": "failsafe test:clean test:execute [--name,--tags] test:report"
+    }
+}
+```
+
+Running `npm test -- --name="Authentication"` will execute:
+- `npm run test:clean`
+- `npm run test:execute -- --name="Authentication"`, which in turn will execute `cucumber-js --name="Authentication"`
+- `npm run test:report`
+
+The same applies to `npm test -- --tags="@smoke"`, which will execute:
+- `npm run test:clean`
+- `npm run test:execute -- --tags="@smoke"`, which in turn will execute `cucumber-js --name="@smoke"`
+- `npm run test:report`
+
+### Using wildcards
+
+To help you avoid configuration errors, Failsafe will complain if you try to execute a script that doesn't exist,
+or use an argument that is not configured for a given script. 
+
+However, you can configure Failsafe with a wildcard of `[...]`. This instructs Failsafe to pass any arguments
+it receives to the script configured with the wildcard.
+
+
+For example, given the below `package.json` file:
+```json
+{
+    "scripts": {
+        "test:clean": "rimraf reports",
+        "test:execute": "cucumber-js",
+        "test:report": "serenity-bdd run",
+        "test": "failsafe test:clean test:execute [...] test:report"
+    }
+}
+```
+
+Running `npm test -- --name="Authentication"` or `npm test -- --tags="@smoke"` will instruct Failsafe to pass
+those arguments to the `test:execute` script - the receiver of the wildcard.
 
 ## Motivation
 
