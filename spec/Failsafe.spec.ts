@@ -526,19 +526,18 @@ describe(`Failsafe`, function() {
             },
         ];
 
-        it(`should parse arguments as expected`, async () => {
-            for (const { inputs, expected } of cases) {
-                for (const input of inputs) {
-                    const logger = new AccumulatingLogger();
-                    const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
-                    if (expected.output) {
-                        failsafe.parseArguments(input);
-                        const actual = failsafe.getScriptArguments();
-                        expect(actual).to.deep.equal(expected.output);
-                    }
-                    if (expected.error) {
-                        expect(() => failsafe.parseArguments(input)).to.throw(expected.error);
-                    }
+        given(cases).
+        it(`should parse arguments as expected`, async ({ inputs, expected }) => {
+            for (const input of inputs) {
+                const logger = new AccumulatingLogger();
+                const failsafe = new TestFailsafe(logger, { cwd: '', isTTY: false }, { });
+                if (expected.output) {
+                    failsafe.parseArguments(input);
+                    const actual = failsafe.getScriptArguments();
+                    expect(actual).to.deep.equal(expected.output);
+                }
+                if (expected.error) {
+                    expect(() => failsafe.parseArguments(input)).to.throw(expected.error);
                 }
             }
         })
