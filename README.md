@@ -2,6 +2,7 @@
 
 [![npm version][npm-version-image]][npm-version-url]
 [![build status][actions-image]][actions-url]
+[![Coverage Status](https://coveralls.io/repos/github/jan-molak/npm-failsafe/badge.svg?branch=main)](https://coveralls.io/github/jan-molak/npm-failsafe?branch=main)
 [![npm][npm-stats-image]][npm-stats-url]
 
 [actions-image]: https://github.com/jan-molak/npm-failsafe/workflows/Main/badge.svg
