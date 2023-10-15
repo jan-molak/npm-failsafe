@@ -1,0 +1,19 @@
+{
+  "all": true,
+  "cache": true,
+  "sourceMap": true,
+  "clean": true,
+  "include": [
+    "src/**/*.ts"
+  ],
+  "exclude": [
+    "**/spec/**"
+  ],
+  "extension": [
+    ".ts"
+  ],
+  "reporter": [
+    "lcov",
+    "text-summary"
+  ]
+}

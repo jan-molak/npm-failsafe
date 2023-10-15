@@ -8,10 +8,10 @@
     "failsafe": "bin/failsafe"
   },
   "scripts": {
-    "clean": "rimraf lib",
+    "clean": "rimraf coverage lib",
     "lint": "eslint --ext ts --config .eslintrc.yml .",
     "lint:fix": "npm run lint -- --fix",
-    "test": "mocha",
+    "test": "c8 mocha",
     "compile": "tsc --project tsconfig.json",
     "commit": "git-cz",
     "semantic-release": "semantic-release"
@@ -33,7 +33,6 @@
     "url": "https://github.com/jan-molak/npm-failsafe/issues"
   },
   "homepage": "https://github.com/jan-molak/npm-failsafe",
-  "dependencies": {},
   "engines": {
     "node": "^16.13 || ^18.12 || ^20"
   },
@@ -44,6 +43,7 @@
     "@types/node": "18.18.5",
     "@typescript-eslint/eslint-plugin": "6.7.5",
     "@typescript-eslint/parser": "6.7.5",
+    "c8": "^8.0.1",
     "chai": "4.3.10",
     "chai-as-promised": "7.1.1",
     "commitizen": "4.3.0",
