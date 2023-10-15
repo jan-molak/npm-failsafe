@@ -34,6 +34,12 @@ jobs:
       - run: npm test
         env:
           CI: true
+      - name: Coveralls
+        uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
+        if: ${{ matrix.node-version == '18.x' }}
+        with:
+          github-token: ${{ github.token }}
+          path-to-lcov: 'coverage/lcov.info'
 
   test-windows:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
