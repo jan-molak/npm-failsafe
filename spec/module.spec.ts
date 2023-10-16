@@ -14,8 +14,8 @@ describe('module', () => {
             const failsafeStub = sinon.stub(Failsafe.prototype);
             failsafeStub.run.resolves(123);
 
-            const number = await run(['some', 'arguments']);
-            expect( number ).to.equal(123);
+            const exitCode = await run(['some', 'arguments']);
+            expect( exitCode ).to.equal(123);
 
             expect( failsafeStub.run ).to.have.been.calledWith(['some', 'arguments']);
         });
