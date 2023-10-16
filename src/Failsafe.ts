@@ -2,15 +2,20 @@ import { spawn } from 'child_process';
 import * as fs from 'fs';
 import readline = require('readline');
 
+import { ArgumentParser, ParseError, Script, UnrecognisedArgumentsError } from './ArgumentParser';
 import { Logger, trimmed } from './logger';
 import path = require('path');
-import { ArgumentParser, ParseError, Script, UnrecognisedArgumentsError } from './ArgumentParser';
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
 
 export interface FailsafeConfig {
     cwd: string;
     isTTY: boolean;
+}
+
+export interface RunResult {
+    exitCode: ExitCode;
+    failedScripts: string[];
 }
 
 export type ExitCode = number;
@@ -82,7 +87,10 @@ export class Failsafe {
                 return 1;
             }
 
-            return await this.runScripts(scripts);
+            const result = await this.runScripts(scripts);
+            this.logger.info('failsafe', this.summaryOf(result));
+
+            return result.exitCode;
         }
         catch (error: any) {
             if (error instanceof ParseError) {
@@ -112,12 +120,24 @@ export class Failsafe {
         }
     }
 
-    private async runScripts(scripts: Script[]): Promise<ExitCode> {
-        return await scripts.reduce(async (previous: Promise<ExitCode>, script: Script) => {
-            const previousExitCode = await previous;
+    private summaryOf(result: RunResult): string {
+        const plural = result.failedScripts.length > 1;
+
+        return result.failedScripts.length === 0
+            ? `Succeeded with exit code ${ result.exitCode } as all scripts passed`
+            : `Failed with exit code ${ result.exitCode } due to failing script${ plural ? 's' : '' }: ${ result.failedScripts.map(s => `'${s}'`).join(', ') }`;
+    }
+
+    private async runScripts(scripts: Script[]): Promise<RunResult> {
+        return await scripts.reduce(async (previous: Promise<RunResult>, script: Script) => {
+            const result = await previous;
             const currentExitCode = await this.runScript(script.name, script.arguments);
-            return Math.max(previousExitCode, currentExitCode);
-        }, Promise.resolve(0));
+            result.exitCode = Math.max(result.exitCode, currentExitCode);
+            if (currentExitCode !== 0) {
+                result.failedScripts.push(script.name);
+            }
+            return result;
+        }, Promise.resolve({ exitCode: 0, failedScripts: [] } as RunResult));
     }
 
     private runScript(scriptName: string, arguments_: string[] = []): Promise<ExitCode> {

@@ -12,7 +12,8 @@ describe(`Failsafe`, function() {
 
     const
         Success = 0,
-        General_Failure = 1;
+        General_Failure = 1,
+        Other_Failure = 7;
 
     it(`exits with error when no scripts are specified`, async () => {
         const { run, logger } = failsafe();
@@ -54,7 +55,7 @@ describe(`Failsafe`, function() {
         { scripts: [`success`, `success`], expected_result: Success },
         { scripts: [`success`, `general-failure`], expected_result: General_Failure },
         { scripts: [`general-failure`, `general-failure`], expected_result: General_Failure },
-        { scripts: [`general`, `success`], expected_result: General_Failure },
+        { scripts: [`general-failure`, `success`], expected_result: General_Failure },
     ).
     it(`returns with the worst exit code encountered`, async ({ scripts, expected_result }) => {
         const { run, logger } = failsafe();
@@ -76,6 +77,7 @@ describe(`Failsafe`, function() {
                 '[success] Tests executed correctly',
                 '[success] Another line',
                 `[failsafe] Script 'success' exited with code 0`,
+                `[failsafe] Succeeded with exit code 0 as all scripts passed`,
             ].join('\n'));
         });
 
@@ -93,6 +95,7 @@ describe(`Failsafe`, function() {
 
             expect(logger.stdout()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
+                `[failsafe] Failed with exit code 1 due to failing script: 'general-failure'`,
             ].join('\n'));
         });
 
@@ -115,24 +118,24 @@ describe(`Failsafe`, function() {
         it(`executes scripts in a sequence`, async () => {
             const { run, logger } = failsafe();
 
-            const exitCode = await run([`success`, `general-failure`]);
+            const exitCode = await run([`general-failure`, `success`, `other-failure`]);
 
-            expect(exitCode).to.equal(General_Failure, `Expected exit code of ${General_Failure}${ format(logger) }`);
+            expect(exitCode).to.equal(Other_Failure, `Expected exit code of ${Other_Failure}${ format(logger) }`);
 
-            expect(logger.stdout()).to.include([
-                '[success] Tests executed correctly',
-                '[success] Another line',
-                `[failsafe] Script 'success' exited with code 0`,
-            ].join('\n'));
-
-            expect(logger.stderr()).to.include([
+            expect(logger.combined()).to.match(toRegex([
+                /.+/,
                 `[general-failure] A test has failed`,
                 `[general-failure] Another line describing the problem`,
-            ].join('\n'));
-
-            expect(logger.stdout()).to.include([
                 `[failsafe] Script 'general-failure' exited with code 1`,
-            ].join('\n'));
+                /.+/,
+                `[success] Tests executed correctly`,
+                `[success] Another line`,
+                `[failsafe] Script 'success' exited with code 0`,
+                /.+/,
+                `[other-failure] A script has failed`,
+                `[failsafe] Script 'other-failure' exited with code 7`,
+                `[failsafe] Failed with exit code 7 due to failing scripts: 'general-failure', 'other-failure'`,
+            ]));
         });
     });
 
@@ -491,6 +494,7 @@ ${ indented(logger.stderr()) }
 
 class AccumulatingLogger extends Logger {
     constructor(
+        public readonly allEntries: string[] = [],
         public readonly infoEntries: string[] = [],
         public readonly errorEntries: string[] = [],
     ) {
@@ -499,14 +503,23 @@ class AccumulatingLogger extends Logger {
 
     help(line: string): void {
         this.infoEntries.push(`${ line }`);
+        this.allEntries.push(`${ line }`);
     }
 
     info(scriptName: string, line: string) {
-        this.infoEntries.push(...this.prefixed(scriptName, line).split('\n'));
+        const lines = this.prefixed(scriptName, line).split('\n')
+        this.infoEntries.push(...lines);
+        this.allEntries.push(...lines);
     }
 
     error(scriptName: string, line: string) {
-        this.errorEntries.push(...this.prefixed(scriptName, line).split('\n'));
+        const lines = this.prefixed(scriptName, line).split('\n')
+        this.errorEntries.push(...lines);
+        this.allEntries.push(...lines);
+    }
+
+    combined(): string {
+        return this.allEntries.join('\n')
     }
 
     stdout(): string {
@@ -516,4 +529,21 @@ class AccumulatingLogger extends Logger {
     stderr(): string {
         return this.errorEntries.join('\n')
     }
+}
+
+function escapeRegExp(string_: string): string {
+    return string_.replaceAll(/[$()*+.?[\\\]^{|}]/g, '\\$&');
+}
+
+function toRegex(lines: (string|RegExp)[]): RegExp {
+    const lastIndex = lines.length - 1;
+    return new RegExp(
+        lines.map(
+            (line, i) => (line instanceof RegExp
+                ? line.source
+                : escapeRegExp(line))
+                + (i === lastIndex ? '\n?' : '\n') // optional newline at the end
+        ).join(''),
+        'sm' // s: dot matches newline, m: multiline, ^ and $ match start/end of line
+    );
 }
