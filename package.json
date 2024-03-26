@@ -46,7 +46,7 @@
     "@typescript-eslint/eslint-plugin": "7.0.1",
     "@typescript-eslint/parser": "7.0.1",
     "c8": "^9.1.0",
-    "chai": "4.4.1",
+    "chai": "5.1.0",
     "chai-as-promised": "7.1.1",
     "commitizen": "4.3.0",
     "cz-conventional-changelog": "3.3.0",
