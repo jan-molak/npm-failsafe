@@ -354,6 +354,20 @@ describe(`Failsafe`, function() {
             ].join('\n'), logger.stdout());
         });
 
+        it(`escapes unescaped double quotes in arguments`, async () => {
+            const { run, logger } = failsafe();
+
+            const exitCode = await run([`print-args`, '[...]', '--', '  "foo"  ', '  "bar"  ']);
+            expect(exitCode).to.equal(Success, `Expected exit code of ${Success}${ format(logger) }`);
+
+            expect(logger.stdout()).to.include([
+                `[print-args] Listing 2 arguments`,
+                `[print-args] "  \\"foo\\"  "`,
+                `[print-args] "  \\"bar\\"  "`,
+                `[failsafe] Script 'print-args' exited with code 0`,
+            ].join('\n'), logger.stdout());
+        });
+
         it(`passes all arguments after separator`, async () => {
             const { run, logger } = failsafe();
 
@@ -368,7 +382,7 @@ describe(`Failsafe`, function() {
             ].join('\n'), logger.stdout());
         });
 
-        it(`passes different arguments to specifc scripts`, async () => {
+        it(`passes different arguments to specific scripts`, async () => {
             const { run, logger } = failsafe();
 
             const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--bar]', '--foo=bar', '--bar=foo']);
