@@ -142,20 +142,28 @@ export class Failsafe {
 
     private runScript(scriptName: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = process.platform.startsWith('win32')
+            const isWindows = process.platform.startsWith('win32');
+
+            const npm = isWindows
                 ? `npm.cmd`
                 : (process.env.npm_execpath ?? `npm`);
+
+            const shellOptions = isWindows
+                ? { shell: true }
+                : {};
 
             const npmArguments = [`run`, scriptName];
             if (arguments_.length > 0) {
                 npmArguments.push('--', ...arguments_);
             }
+
             const script = spawn(npm, npmArguments, {
                 cwd: this.config.cwd,
                 env: {
                     'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
                     ...this.env
-                }
+                },
+                ...shellOptions,
             });
 
             const
