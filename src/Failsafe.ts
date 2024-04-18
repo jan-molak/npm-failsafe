@@ -1,11 +1,10 @@
-import {ChildProcess, spawn} from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import * as fs from 'fs';
 import readline = require('readline');
+import path = require('path');
 
 import { ArgumentParser, ParseError, Script, UnrecognisedArgumentsError } from './ArgumentParser';
 import { Logger, trimmed } from './logger';
-import path = require('path');
-import {ChildProcessWithoutNullStreams} from "node:child_process";
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
 
