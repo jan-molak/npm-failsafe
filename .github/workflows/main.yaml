@@ -11,7 +11,7 @@ permissions:
   contents: read
 
 jobs:
-  test-linux:
+  test:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
 
     strategy:
@@ -90,8 +90,7 @@ jobs:
   release:
     needs:
       - build
-      - test-linux
-      - test-windows
+      - test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
     permissions:
