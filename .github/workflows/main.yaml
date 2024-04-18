@@ -63,8 +63,8 @@ jobs:
           path: coverage
           merge-multiple: false
       - run: |
-          - mkdir coverage/tmp
-          - cp -r coverage/*/tmp/. coverage/tmp
+          mkdir coverage/tmp
+          cp -r coverage/*/tmp/. coverage/tmp
       - run: npx c8 report --merge-async --reporter=html --reporter=lcov --reporter=text-summary --temp-directory=./coverage/tmp --report-dir=./coverage
       - name: Coveralls
         uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
