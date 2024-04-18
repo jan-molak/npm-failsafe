@@ -13,7 +13,6 @@
     ".ts"
   ],
   "reporter": [
-    "lcov",
     "text-summary"
   ]
 }

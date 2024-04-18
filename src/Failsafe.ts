@@ -1,10 +1,10 @@
-import { spawn } from 'child_process';
+import { ChildProcessWithoutNullStreams, spawn } from 'child_process';
 import * as fs from 'fs';
 import readline = require('readline');
+import path = require('path');
 
 import { ArgumentParser, ParseError, Script, UnrecognisedArgumentsError } from './ArgumentParser';
 import { Logger, trimmed } from './logger';
-import path = require('path');
 
 const packageJson = JSON.parse(fs.readFileSync(path.join(__dirname, '..', 'package.json'), 'utf8'))
 
@@ -112,7 +112,6 @@ export class Failsafe {
                     |`);
             }
             else {
-                // istanbul ignore next
                 this.logger.error('failsafe', `Error: ${ error.message }`);
             }
 
@@ -142,21 +141,16 @@ export class Failsafe {
 
     private runScript(scriptName: string, arguments_: string[] = []): Promise<ExitCode> {
         return new Promise((resolve, reject) => {
-            const npm = process.platform.startsWith('win32')
-                ? `npm.cmd`
-                : (process.env.npm_execpath ?? `npm`);
+            const isWindows = process.platform.startsWith('win32');
 
             const npmArguments = [`run`, scriptName];
             if (arguments_.length > 0) {
                 npmArguments.push('--', ...arguments_);
             }
-            const script = spawn(npm, npmArguments, {
-                cwd: this.config.cwd,
-                env: {
-                    'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
-                    ...this.env
-                }
-            });
+
+            const script = isWindows
+                ? this.windowsSpawn(npmArguments)
+                : this.linuxAndMacSpawn(npmArguments);
 
             const
                 stdout = readline.createInterface({ input: script.stdout }),
@@ -174,5 +168,44 @@ export class Failsafe {
                 resolve(code ?? 0);
             });
         });
+    }
+
+    private linuxAndMacSpawn(npmArguments: string[]): ChildProcessWithoutNullStreams {
+        const npm = process.env.npm_execpath ?? `npm`;
+
+        return spawn(npm, npmArguments, {
+            cwd: this.config.cwd,
+            env: {
+                ...this.forceColorEnv(),
+                ...this.env
+            },
+        });
+    }
+
+    private windowsSpawn(npmArguments: string[]): ChildProcessWithoutNullStreams {
+        /* c8 ignore start */
+        return spawn(`npm.cmd`, npmArguments.map(npmArgument => this.quoteArgumentsWithSpaces(npmArgument)), {
+            cwd: this.config.cwd,
+            env: {
+                ...this.forceColorEnv(),
+                ...this.env
+            },
+            shell: true,
+        });
+        /* c8 ignore stop */
+    }
+
+    private quoteArgumentsWithSpaces(npmArgument: string): string {
+        /* c8 ignore start */
+        return npmArgument.includes(' ')
+            ? `"${ npmArgument }"`
+            : npmArgument;
+        /* c8 ignore stop */
+    }
+
+    private forceColorEnv() {
+        return {
+            'FORCE_COLOR': this.config.isTTY ? '1' : undefined,
+        }
     }
 }

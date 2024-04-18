@@ -351,7 +351,7 @@ describe(`Failsafe`, function() {
                 `[print-args] "  foo  "`,
                 `[print-args] "  bar  "`,
                 `[failsafe] Script 'print-args' exited with code 0`,
-            ].join('\n'));
+            ].join('\n'), logger.stdout());
         });
 
         it(`passes all arguments after separator`, async () => {
@@ -365,10 +365,10 @@ describe(`Failsafe`, function() {
                 `[print-args] "foo bar"`,
                 `[print-args] "baz"`,
                 `[failsafe] Script 'print-args' exited with code 0`,
-            ].join('\n'));
+            ].join('\n'), logger.stdout());
         });
 
-        it(`passes different arguments to specifc scripts`, async () => {
+        it(`passes different arguments to specific scripts`, async () => {
             const { run, logger } = failsafe();
 
             const exitCode = await run([`print-args`, '[--foo]', 'also-print-args', '[--bar]', '--foo=bar', '--bar=foo']);
