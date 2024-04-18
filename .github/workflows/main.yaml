@@ -64,12 +64,16 @@ jobs:
           merge-multiple: false
       - name: Aggregate reports
         run: |
-          tree coverage
           mkdir coverage/tmp
           cp -r coverage/*/tmp/. coverage/tmp
-          tree coverage
       - name: Merge coverage reports
         run: npx c8 report --merge-async --reporter=html --reporter=lcov --reporter=text-summary --temp-directory=./coverage/tmp --report-dir=./coverage
+      - uses: actions/upload-artifact@v4
+        with:
+          name: aggregated-coverage
+          if-no-files-found: warn
+          path: coverage
+          retention-days: 1
       - name: Coveralls
         uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
         with:
