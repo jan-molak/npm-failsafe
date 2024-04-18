@@ -13,11 +13,14 @@ permissions:
 jobs:
   test-linux:
     if: "!contains(github.event.head_commit.message, 'ci skip')"
-    runs-on: ubuntu-latest
 
     strategy:
+      fail-fast: false
       matrix:
         node-version: [ 16.x, 18.x, 20.x ]
+        os: [ ubuntu-latest, windows-latest ]
+
+    runs-on: ${{ matrix.os }}
 
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
@@ -34,20 +37,18 @@ jobs:
       - run: npm test
         env:
           CI: true
-      - name: Coveralls
-        uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
-        if: ${{ matrix.node-version == '18.x' }}
+      - uses: actions/upload-artifact@v4
         with:
-          github-token: ${{ github.token }}
-          path-to-lcov: 'coverage/lcov.info'
+          name: ${{ env.RUN_UNIQUE_ID }}_artifact
+          if-no-files-found: warn
+          path: coverage
+          retention-days: 1
 
-  test-windows:
-    if: "!contains(github.event.head_commit.message, 'ci skip')"
-    runs-on: windows-latest
-
+  coverage:
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11 # v4
-      - name: Setup Node.js
+      - name: Setup Node
         uses: actions/setup-node@60edb5dd545a775178f52524783378180af0d1f8 # v4
         with:
           node-version: 18.x
@@ -55,11 +56,16 @@ jobs:
         uses: bahmutov/npm-install@v1
         with:
           install-command: npm ci
-      - run: npm run clean
-      - run: npm run lint
-      - run: npm test
-        env:
-          CI: true
+      - uses: actions/download-artifact@v4
+        with:
+          path: coverage
+          merge-multiple: true
+      - run: npx c8 report
+      - name: Coveralls
+        uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
+        with:
+          github-token: ${{ github.token }}
+          path-to-lcov: 'coverage/lcov.info'
 
   build:
     runs-on: ubuntu-latest
