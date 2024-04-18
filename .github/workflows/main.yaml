@@ -39,6 +39,7 @@ jobs:
           CI: true
       - uses: actions/upload-artifact@v4
         with:
+          name: ${{ matrix.os }}-${{ matrix.node-version }}-coverage
           if-no-files-found: warn
           path: coverage
           retention-days: 1
