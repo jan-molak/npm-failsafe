@@ -58,24 +58,13 @@ jobs:
         uses: bahmutov/npm-install@v1
         with:
           install-command: npm ci
-      - uses: actions/download-artifact@v4
+      - name: Aggregate coverage reports
+        uses: actions/download-artifact@v4
         with:
           path: coverage
-          merge-multiple: false
-      - name: Aggregate reports
-        run: |
-          mkdir coverage/tmp
-          cp -r coverage/*/tmp/. coverage/tmp
+          merge-multiple: true
       - name: Merge coverage reports
-        run: |
-          npx istanbul-merge --out coverage-final.json coverage/*/coverage-final.json
-          npx c8 report --merge-async --reporter=html --reporter=lcov --reporter=text-summary --temp-directory=./coverage/tmp --report-dir=./coverage
-      - uses: actions/upload-artifact@v4
-        with:
-          name: aggregated-coverage
-          if-no-files-found: warn
-          path: coverage
-          retention-days: 1
+        run: npx c8 report --merge-async --reporter=lcov --reporter=text-summary
       - name: Coveralls
         uses: coverallsapp/github-action@3dfc5567390f6fa9267c0ee9c251e4c8c3f18949 # v2.2.3
         with:

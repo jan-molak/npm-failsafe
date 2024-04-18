@@ -112,7 +112,7 @@ export class Failsafe {
                     |`);
             }
             else {
-                // istanbul ignore next
+                /* c8 ignore next */
                 this.logger.error('failsafe', `Error: ${ error.message }`);
             }
 
@@ -184,7 +184,7 @@ export class Failsafe {
     }
 
     private windowsSpawn(npmArguments: string[]): ChildProcessWithoutNullStreams {
-
+        /* c8 ignore next */
         return spawn(`npm.cmd`, npmArguments.map(npmArgument => this.quoteArgumentsWithSpaces(npmArgument)), {
             cwd: this.config.cwd,
             env: {
@@ -196,6 +196,7 @@ export class Failsafe {
     }
 
     private quoteArgumentsWithSpaces(npmArgument: string): string {
+        /* c8 ignore next */
         return npmArgument.includes(' ')
             ? `"${ npmArgument }"`
             : npmArgument;

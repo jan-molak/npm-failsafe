@@ -13,7 +13,6 @@
     ".ts"
   ],
   "reporter": [
-    "json",
     "text-summary"
   ]
 }
