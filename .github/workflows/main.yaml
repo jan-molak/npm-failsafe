@@ -67,7 +67,9 @@ jobs:
           mkdir coverage/tmp
           cp -r coverage/*/tmp/. coverage/tmp
       - name: Merge coverage reports
-        run: npx c8 report --merge-async --reporter=html --reporter=lcov --reporter=text-summary --temp-directory=./coverage/tmp --report-dir=./coverage
+        run: |
+          npx istanbul-merge --out coverage-final.json coverage/*/coverage-final.json
+          npx c8 report --merge-async --reporter=html --reporter=lcov --reporter=text-summary --temp-directory=./coverage/tmp --report-dir=./coverage
       - uses: actions/upload-artifact@v4
         with:
           name: aggregated-coverage
