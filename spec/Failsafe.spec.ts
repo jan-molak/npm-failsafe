@@ -205,6 +205,7 @@ describe(`Failsafe`, function() {
                 `[failsafe]         For details see: `,
             ].join('\n'));
         });
+
         it(`fails on unknown arguments with 2 scripts `, async () => {
             const { run, logger } = failsafe();
 
