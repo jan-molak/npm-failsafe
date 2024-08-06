@@ -37,7 +37,7 @@ jobs:
       - run: npm test
         env:
           CI: true
-      - uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
+      - uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
           name: ${{ matrix.os }}-${{ matrix.node-version }}-coverage
           if-no-files-found: warn
@@ -86,7 +86,7 @@ jobs:
         with:
           install-command: npm ci
       - run: npm run compile
-      - uses: actions/upload-artifact@89ef406dd8d7e03cfd12d9e0a4a378f454709029 # v4
+      - uses: actions/upload-artifact@834a144ee995460fba8ed112a2fc961b36a5ec5a # v4
         with:
           name: lib
           path: lib/
