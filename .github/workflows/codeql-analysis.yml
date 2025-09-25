@@ -39,7 +39,7 @@ jobs:
       - name: Use Node.js 16.x
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 22.19.0
+          node-version: 22.20.0
 
       # Initializes the CodeQL tools for scanning.
       - name: Initialize CodeQL
