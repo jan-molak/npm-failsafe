@@ -34,7 +34,7 @@
   },
   "homepage": "https://github.com/jan-molak/npm-failsafe",
   "engines": {
-    "node": "^18.12 || ^20 || ^22"
+    "node": "^18.12 || ^20 || ^22 || ^24.0.0"
   },
   "devDependencies": {
     "@types/chai": "5.2.3",
