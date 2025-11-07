@@ -59,7 +59,7 @@
     "mocha": "11.7.5",
     "mocha-testdata": "1.2.0",
     "rimraf": "6.1.0",
-    "semantic-release": "25.0.1",
+    "semantic-release": "25.0.2",
     "sinon": "^21.0.0",
     "sinon-chai": "^3.7.0",
     "supports-color": "10.2.2",
