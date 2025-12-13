@@ -37,7 +37,7 @@ jobs:
       - run: npm test
         env:
           CI: true
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: ${{ matrix.os }}-${{ matrix.node-version }}-coverage
           if-no-files-found: warn
@@ -59,7 +59,7 @@ jobs:
         with:
           install-command: npm ci
       - name: Aggregate coverage reports
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           path: coverage
           merge-multiple: true
@@ -86,7 +86,7 @@ jobs:
         with:
           install-command: npm ci
       - run: npm run compile
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # v5
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
         with:
           name: lib
           path: lib/
@@ -112,7 +112,7 @@ jobs:
         uses: bahmutov/npm-install@v1
         with:
           install-command: npm ci
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           name: lib
           path: lib
