@@ -38,7 +38,7 @@
   },
   "devDependencies": {
     "@types/chai": "5.2.3",
-    "@types/chai-as-promised": "7.1.8",
+    "@types/chai-as-promised": "8.0.2",
     "@types/mocha": "10.0.10",
     "@types/node": "24.11.0",
     "@types/sinon": "21.0.0",
@@ -47,7 +47,7 @@
     "@typescript-eslint/parser": "7.18.0",
     "c8": "^11.0.0",
     "chai": "4.5.0",
-    "chai-as-promised": "7.1.2",
+    "chai-as-promised": "8.0.2",
     "commitizen": "4.3.1",
     "cz-conventional-changelog": "3.3.0",
     "eslint": "8.57.1",
