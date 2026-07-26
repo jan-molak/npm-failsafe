@@ -62,7 +62,7 @@
     "semantic-release": "25.0.8",
     "sinon": "22.1.0",
     "sinon-chai": "3.7.0",
-    "supports-color": "10.2.2",
+    "supports-color": "11.0.0",
     "ts-node": "10.9.2",
     "typescript": "5.9.3"
   },
