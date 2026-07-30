@@ -53,7 +53,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24.18.0
+          node-version: 24.18.1
       - name: Install Node Modules
         uses: bahmutov/npm-install@v1
         with:
@@ -80,7 +80,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24.18.0
+          node-version: 24.18.1
       - name: Install Node Modules
         uses: bahmutov/npm-install@v1
         with:
@@ -107,7 +107,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7
         with:
-          node-version: 24.18.0
+          node-version: 24.18.1
       - name: Install Node Modules
         uses: bahmutov/npm-install@v1
         with:
